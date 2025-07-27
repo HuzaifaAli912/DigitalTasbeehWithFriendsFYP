@@ -20,7 +20,7 @@ struct WelcomeView: View {
                     .padding(.top, 20)
                 
                 // Subheading Text
-                Text("Welcome to Digital Tasbeeh!\nStart counting your blessings with ease and accuracy.")
+                Text("Welcome to Digital Tasbeh!\nStart counting your blessings with ease and accuracy.")
                     .multilineTextAlignment(.center)
                     .padding()
                     .foregroundColor(.gray)
