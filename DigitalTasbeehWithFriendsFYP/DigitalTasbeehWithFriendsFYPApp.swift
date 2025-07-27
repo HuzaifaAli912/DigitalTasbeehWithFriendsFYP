@@ -8,10 +8,10 @@
 import SwiftUI
 
 @main
-struct DigitalTasbeehWithFriendsFYPApp: App {
+struct DigitalTasbeehApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            WelcomeView()  // Show the Welcome Screen first
         }
     }
 }

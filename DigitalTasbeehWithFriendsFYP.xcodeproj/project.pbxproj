@@ -8,17 +8,53 @@
 
 /* Begin PBXBuildFile section */
 		132865702E16A88B0025FA2F /* DigitalTasbeehWithFriendsFYPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1328656F2E16A88B0025FA2F /* DigitalTasbeehWithFriendsFYPApp.swift */; };
-		132865722E16A88B0025FA2F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132865712E16A88B0025FA2F /* ContentView.swift */; };
 		132865742E16A88E0025FA2F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 132865732E16A88E0025FA2F /* Assets.xcassets */; };
 		132865772E16A88E0025FA2F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 132865762E16A88E0025FA2F /* Preview Assets.xcassets */; };
+		132865802E16AA200025FA2F /* WelcomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1328657F2E16AA200025FA2F /* WelcomeScreen.swift */; };
+		132865822E16AFF90025FA2F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132865812E16AFF90025FA2F /* LoginView.swift */; };
+		132865842E16B02D0025FA2F /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132865832E16B02D0025FA2F /* NetworkManager.swift */; };
+		132865862E16CA2A0025FA2F /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132865852E16CA2A0025FA2F /* SignupView.swift */; };
+		132865882E193D4F0025FA2F /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132865872E193D4F0025FA2F /* HomeView.swift */; };
+		1328658A2E1959BD0025FA2F /* GroupListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132865892E1959BD0025FA2F /* GroupListView.swift */; };
+		132865902E1960F30025FA2F /* CreateGroupSingleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1328658F2E1960F30025FA2F /* CreateGroupSingleView.swift */; };
+		138BF1922E1AE1F400B46802 /* AllFriends.swift in Sources */ = {isa = PBXBuildFile; fileRef = 138BF1912E1AE1F400B46802 /* AllFriends.swift */; };
+		138BF1942E1AEA1400B46802 /* AllTasbeehView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 138BF1932E1AEA1400B46802 /* AllTasbeehView.swift */; };
+		138BF1962E1AF21B00B46802 /* NotificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 138BF1952E1AF21B00B46802 /* NotificationView.swift */; };
+		1390D6402E1A7B0000CC312A /* LoggedInUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1390D63F2E1A7B0000CC312A /* LoggedInUser.swift */; };
+		1390D6442E1A856F00CC312A /* SingleModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1390D6432E1A856F00CC312A /* SingleModel.swift */; };
+		13955A502E1C0DA900AE7D39 /* AllGroupTasbeehView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13955A4F2E1C0DA900AE7D39 /* AllGroupTasbeehView.swift */; };
+		13955A522E1C5B2300AE7D39 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13955A512E1C5B2300AE7D39 /* HistoryView.swift */; };
+		13955A542E1C7B6B00AE7D39 /* Anycodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13955A532E1C7B6B00AE7D39 /* Anycodable.swift */; };
+		13955A562E1C7B9700AE7D39 /* AssignTasbeehView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13955A552E1C7B9600AE7D39 /* AssignTasbeehView.swift */; };
+		13955A582E1C832300AE7D39 /* ManuallyDistributionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13955A572E1C832300AE7D39 /* ManuallyDistributionView.swift */; };
+		13955A5A2E1CC0F200AE7D39 /* CreateTasbeehView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13955A592E1CC0F200AE7D39 /* CreateTasbeehView.swift */; };
+		13955A5C2E1CD17100AE7D39 /* CounterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13955A5B2E1CD17100AE7D39 /* CounterView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1328656C2E16A88B0025FA2F /* DigitalTasbeehWithFriendsFYP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigitalTasbeehWithFriendsFYP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1328656F2E16A88B0025FA2F /* DigitalTasbeehWithFriendsFYPApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigitalTasbeehWithFriendsFYPApp.swift; sourceTree = "<group>"; };
-		132865712E16A88B0025FA2F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		132865732E16A88E0025FA2F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		132865762E16A88E0025FA2F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		1328657F2E16AA200025FA2F /* WelcomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeScreen.swift; sourceTree = "<group>"; };
+		132865812E16AFF90025FA2F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		132865832E16B02D0025FA2F /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
+		132865852E16CA2A0025FA2F /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
+		132865872E193D4F0025FA2F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		132865892E1959BD0025FA2F /* GroupListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupListView.swift; sourceTree = "<group>"; };
+		1328658F2E1960F30025FA2F /* CreateGroupSingleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateGroupSingleView.swift; sourceTree = "<group>"; };
+		138BF1912E1AE1F400B46802 /* AllFriends.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllFriends.swift; sourceTree = "<group>"; };
+		138BF1932E1AEA1400B46802 /* AllTasbeehView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllTasbeehView.swift; sourceTree = "<group>"; };
+		138BF1952E1AF21B00B46802 /* NotificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationView.swift; sourceTree = "<group>"; };
+		1390D63F2E1A7B0000CC312A /* LoggedInUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggedInUser.swift; sourceTree = "<group>"; };
+		1390D6432E1A856F00CC312A /* SingleModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleModel.swift; sourceTree = "<group>"; };
+		13955A4F2E1C0DA900AE7D39 /* AllGroupTasbeehView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllGroupTasbeehView.swift; sourceTree = "<group>"; };
+		13955A512E1C5B2300AE7D39 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		13955A532E1C7B6B00AE7D39 /* Anycodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anycodable.swift; sourceTree = "<group>"; };
+		13955A552E1C7B9600AE7D39 /* AssignTasbeehView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssignTasbeehView.swift; sourceTree = "<group>"; };
+		13955A572E1C832300AE7D39 /* ManuallyDistributionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManuallyDistributionView.swift; sourceTree = "<group>"; };
+		13955A592E1CC0F200AE7D39 /* CreateTasbeehView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTasbeehView.swift; sourceTree = "<group>"; };
+		13955A5B2E1CD17100AE7D39 /* CounterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,7 +88,25 @@
 			isa = PBXGroup;
 			children = (
 				1328656F2E16A88B0025FA2F /* DigitalTasbeehWithFriendsFYPApp.swift */,
-				132865712E16A88B0025FA2F /* ContentView.swift */,
+				132865832E16B02D0025FA2F /* NetworkManager.swift */,
+				1328657F2E16AA200025FA2F /* WelcomeScreen.swift */,
+				132865812E16AFF90025FA2F /* LoginView.swift */,
+				132865852E16CA2A0025FA2F /* SignupView.swift */,
+				132865872E193D4F0025FA2F /* HomeView.swift */,
+				13955A5B2E1CD17100AE7D39 /* CounterView.swift */,
+				13955A592E1CC0F200AE7D39 /* CreateTasbeehView.swift */,
+				13955A552E1C7B9600AE7D39 /* AssignTasbeehView.swift */,
+				13955A572E1C832300AE7D39 /* ManuallyDistributionView.swift */,
+				13955A512E1C5B2300AE7D39 /* HistoryView.swift */,
+				138BF1952E1AF21B00B46802 /* NotificationView.swift */,
+				138BF1932E1AEA1400B46802 /* AllTasbeehView.swift */,
+				138BF1912E1AE1F400B46802 /* AllFriends.swift */,
+				132865892E1959BD0025FA2F /* GroupListView.swift */,
+				13955A4F2E1C0DA900AE7D39 /* AllGroupTasbeehView.swift */,
+				1328658F2E1960F30025FA2F /* CreateGroupSingleView.swift */,
+				1390D63F2E1A7B0000CC312A /* LoggedInUser.swift */,
+				1390D6432E1A856F00CC312A /* SingleModel.swift */,
+				13955A532E1C7B6B00AE7D39 /* Anycodable.swift */,
 				132865732E16A88E0025FA2F /* Assets.xcassets */,
 				132865752E16A88E0025FA2F /* Preview Content */,
 			);
@@ -137,8 +191,26 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				132865722E16A88B0025FA2F /* ContentView.swift in Sources */,
+				132865842E16B02D0025FA2F /* NetworkManager.swift in Sources */,
+				132865822E16AFF90025FA2F /* LoginView.swift in Sources */,
+				1328658A2E1959BD0025FA2F /* GroupListView.swift in Sources */,
+				13955A582E1C832300AE7D39 /* ManuallyDistributionView.swift in Sources */,
+				13955A502E1C0DA900AE7D39 /* AllGroupTasbeehView.swift in Sources */,
+				138BF1962E1AF21B00B46802 /* NotificationView.swift in Sources */,
+				138BF1942E1AEA1400B46802 /* AllTasbeehView.swift in Sources */,
+				132865802E16AA200025FA2F /* WelcomeScreen.swift in Sources */,
+				13955A522E1C5B2300AE7D39 /* HistoryView.swift in Sources */,
+				132865902E1960F30025FA2F /* CreateGroupSingleView.swift in Sources */,
+				132865882E193D4F0025FA2F /* HomeView.swift in Sources */,
+				13955A5A2E1CC0F200AE7D39 /* CreateTasbeehView.swift in Sources */,
+				13955A562E1C7B9700AE7D39 /* AssignTasbeehView.swift in Sources */,
+				138BF1922E1AE1F400B46802 /* AllFriends.swift in Sources */,
 				132865702E16A88B0025FA2F /* DigitalTasbeehWithFriendsFYPApp.swift in Sources */,
+				132865862E16CA2A0025FA2F /* SignupView.swift in Sources */,
+				13955A542E1C7B6B00AE7D39 /* Anycodable.swift in Sources */,
+				1390D6402E1A7B0000CC312A /* LoggedInUser.swift in Sources */,
+				1390D6442E1A856F00CC312A /* SingleModel.swift in Sources */,
+				13955A5C2E1CD17100AE7D39 /* CounterView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
