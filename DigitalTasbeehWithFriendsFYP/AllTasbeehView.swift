@@ -1,79 +1,186 @@
 import SwiftUI
 
-// MARK: - Custom Error Model
 struct AlertError: Identifiable {
     var id = UUID()
     var message: String
 }
 
-// MARK: - Tasbeeh Model
-struct TasbeehItem: Identifiable, Codable {
+struct TasbeehItem: Identifiable, Codable, Equatable {
     let id: Int
     let title: String
     let type: String
-    
 
     enum CodingKeys: String, CodingKey {
-        case id = "ID"  // Mapping "ID" from API response to "id" in the model
+        case id = "ID"
         case title = "Tasbeeh_Title"
         case type = "Type"
     }
 }
 
-// MARK: - All Tasbeeh View
+struct CompoundTasbeehLink: Codable {
+    let Tasbeeh_id: Int
+    let Existing_Tasbeehid: Int
+}
+
+struct CreateCompoundTitlePayload: Codable {
+    let Tasbeeh_Title: String
+    let User_id: Int
+    let tasbeehType: String
+
+    enum CodingKeys: String, CodingKey {
+        case Tasbeeh_Title
+        case User_id
+        case tasbeehType = "Type"
+    }
+}
+
 struct AllTasbeehView: View {
     let userId: Int
-    
+
     @State private var tasbeehs: [TasbeehItem] = []
-    @State private var showCreateView = false
-    @State private var isLoading = false // Track loading state
-    @State private var alertError: AlertError? // Show error message if any
+    @State private var searchText: String = ""
+    @State private var isLoading = false
+    @State private var alertError: AlertError?
+
+    @State private var isCompoundMode = false
+    @State private var selectedTasbeehs: [TasbeehItem] = []
+    @State private var compoundTitle: String = ""
 
     var body: some View {
         NavigationStack {
             VStack {
+                if isCompoundMode {
+                    HStack {
+                        Button(action: cancelCompoundMode) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red)
+                                .font(.title2)
+                        }
+
+                        TextField("Enter compound title", text: $compoundTitle)
+                            .textFieldStyle(.roundedBorder)
+                            .padding(.horizontal)
+
+                        Button(action: createCompoundTasbeeh) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.title2)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+
+                TextField("Search Tasbeeh...", text: $searchText)
+                    .padding(10)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                    .padding([.horizontal, .top])
+
                 Text("All Tasbeeh")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .padding(.top)
 
                 if isLoading {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                         .padding()
                 }
 
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(tasbeehs) { tasbeeh in
+                        ForEach(filteredTasbeehs) { tasbeeh in
+                            // Wrap the entire HStack in a NavigationLink to make it tappable
+                            NavigationLink(
+                                destination: TasbeehDetails(tasbeehId: tasbeeh.id) // Navigate to TasbeehDetails
+                            ) {
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text(tasbeeh.title)
+                                            .font(.headline)
+                                            .foregroundColor(.black)
+                                        Text(tasbeeh.type)
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+
+                                    Spacer()
+
+                                    Button(action: {
+                                        deleteTasbeeh(id: tasbeeh.id)
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                                .padding()
+                                .background(
+                                    selectedTasbeehs.contains(tasbeeh) && isCompoundMode
+                                    ? Color.green.opacity(0.3)
+                                    : Color.blue.opacity(0.3)
+                                )
+                                .cornerRadius(12)
+                                .onTapGesture {
+                                    if isCompoundMode {
+                                        if selectedTasbeehs.contains(tasbeeh) {
+                                            selectedTasbeehs.removeAll { $0 == tasbeeh }
+                                        } else {
+                                            selectedTasbeehs.append(tasbeeh)
+                                        }
+                                    }
+                                }
+                                .onLongPressGesture {
+                                    if !isCompoundMode {
+                                        isCompoundMode = true
+                                        selectedTasbeehs.append(tasbeeh)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+
+                if isCompoundMode && !selectedTasbeehs.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Existing Tasbeeh Chain")
+                            .font(.headline)
+                            .padding(.horizontal)
+
+                        ForEach(selectedTasbeehs.indices, id: \.self) { index in
+                            let item = selectedTasbeehs[index]
                             HStack {
-                                
-                                
                                 VStack(alignment: .leading) {
-                                    Text(tasbeeh.title)
-                                        .font(.headline)
-                                        .foregroundColor(.black)
-                                    Text(tasbeeh.type)
+                                    Text(item.title)
+                                        .font(.subheadline)
+                                    Text(item.type)
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                 }
 
                                 Spacer()
-                                
 
                                 Button(action: {
-                                    deleteTasbeeh(id: tasbeeh.id)
+                                    selectedTasbeehs.remove(at: index)
                                 }) {
-                                    Image(systemName: "trash")
+                                    Image(systemName: "minus.circle")
                                         .foregroundColor(.red)
+                                }
+
+                                if index > 0 {
+                                    Button(action: {
+                                        selectedTasbeehs.swapAt(index, index - 1)
+                                    }) {
+                                        Image(systemName: "arrow.up.circle")
+                                            .foregroundColor(.black)
+                                    }
                                 }
                             }
                             .padding()
-                            .background(Color.blue.opacity(0.3))
-                            .cornerRadius(12)
+                            .background(Color.white)
+                            .cornerRadius(10)
+                            .shadow(radius: 1)
+                            .padding(.horizontal)
                         }
                     }
-                    .padding(.horizontal)
                 }
 
                 Spacer()
@@ -91,51 +198,36 @@ struct AllTasbeehView: View {
                             .padding()
                     }
                 }
-                
             }
             .onAppear {
                 fetchTasbeehs()
             }
             .alert(item: $alertError) { error in
-                Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Message"), message: Text(error.message), dismissButton: .default(Text("OK")))
             }
         }
-        Button(action: {
-            // TODO: API call to submit tasbeeh
-            print("Merging Tasbeeh with title: \(tasbeehs)")
-        }) {
-            Text("Merge")
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(30)
-                .padding(.horizontal)
-        }
-
-        Spacer()
     }
 
-    // MARK: - Fetch Tasbeehs
+    var filteredTasbeehs: [TasbeehItem] {
+        if searchText.isEmpty {
+            return tasbeehs
+        } else {
+            return tasbeehs.filter { $0.title.lowercased().contains(searchText.lowercased()) }
+        }
+    }
+
     func fetchTasbeehs() {
         isLoading = true
         alertError = nil
-        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/Alltasbeeh?userid=\(userId)") else {
-            print("❌ Invalid URL")
-            return
-        }
+        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/Alltasbeeh?userid=\(userId)") else { return }
 
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data else {
                 DispatchQueue.main.async {
                     self.alertError = AlertError(message: "No data received")
+                    self.isLoading = false
                 }
                 return
-            }
-
-            // Log the raw response to see the actual data
-            if let jsonStr = String(data: data, encoding: .utf8) {
-                print("📦 Raw Response: \(jsonStr)")
             }
 
             do {
@@ -146,81 +238,125 @@ struct AllTasbeehView: View {
                 }
             } catch {
                 DispatchQueue.main.async {
-                    self.alertError = AlertError(message: "❌ JSON decode error: \(error)")
+                    self.alertError = AlertError(message: "Decode error: \(error)")
                     self.isLoading = false
                 }
             }
         }.resume()
     }
 
-    // MARK: - Delete Tasbeeh
     func deleteTasbeeh(id: Int) {
         isLoading = true
         alertError = nil
-        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/Deletetasbeeh?userid=\(userId)&tabseehid=\(id)") else {
-            print("❌ Invalid delete URL")
-            return
-        }
+        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/Deletetasbeeh?userid=\(userId)&tabseehid=\(id)") else { return }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "GET" // Use GET for the delete request since the API expects it
+        request.httpMethod = "GET"
 
         URLSession.shared.dataTask(with: request) { _, response, error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    self.alertError = AlertError(message: "Network error: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                if let error = error {
+                    self.alertError = AlertError(message: "Delete error: \(error.localizedDescription)")
                     self.isLoading = false
+                    return
                 }
-                return
-            }
 
-            if let httpResponse = response as? HTTPURLResponse {
-                print("❌ HTTP Status Code: \(httpResponse.statusCode)")
-                if httpResponse.statusCode == 200 {
-                    DispatchQueue.main.async {
-                        self.tasbeehs.removeAll { $0.id == id } // Remove from UI
-                        self.isLoading = false
-                    }
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    self.tasbeehs.removeAll { $0.id == id }
                 } else {
-                    DispatchQueue.main.async {
-                        self.alertError = AlertError(message: "Failed to delete the Tasbeeh. Status Code: \(httpResponse.statusCode)")
-                        self.isLoading = false
-                    }
+                    self.alertError = AlertError(message: "Failed to delete Tasbeeh.")
                 }
+                self.isLoading = false
             }
         }.resume()
     }
-    //make compoumd tasbeeh or merge
-    func createTasbeeh(title: String, count: Int, type: String) {
-        let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/User/CreateCompoundTasbeeh")!
+
+    func cancelCompoundMode() {
+        isCompoundMode = false
+        selectedTasbeehs.removeAll()
+        compoundTitle = ""
+    }
+
+    // Step 1: Create the compound title
+    func createCompoundTasbeeh() {
+        guard !compoundTitle.isEmpty else {
+            alertError = AlertError(message: "Please enter compound title.")
+            return
+        }
+
+        let payload = CreateCompoundTitlePayload(Tasbeeh_Title: compoundTitle, User_id: userId, tasbeehType: "Compund")
+
+        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/createtasbeehtitle") else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let tasbeeh = [
-            "Tasbeeh_Title": title,
-            "Count": count,
-            "Type": type
-        ] as [String : Any]
-
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: tasbeeh)
+            request.httpBody = try JSONEncoder().encode(payload)
         } catch {
-            print("❌ JSON Error:", error)
+            alertError = AlertError(message: "Encoding error")
             return
         }
 
-        URLSession.shared.dataTask(with: request) { data, _, error in
-            if let error = error {
-                print("❌ API Error:", error.localizedDescription)
-            } else {
-                print("✅ Tasbeeh Created")
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {
+                DispatchQueue.main.async {
+                    self.alertError = AlertError(message: "Network error: \(error?.localizedDescription ?? "Unknown")")
+                }
+                return
+            }
+
+            do {
+                if let tasbeehId = try JSONDecoder().decode(Int?.self, from: data) {
+                    submitCompoundChain(tasbeehId: tasbeehId)
+                } else {
+                    DispatchQueue.main.async {
+                        self.alertError = AlertError(message: "Failed to get Tasbeeh ID.")
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.alertError = AlertError(message: "Decoding error on title creation.")
+                }
+            }
+        }.resume()
+    }
+
+    // Step 2: Submit the selected tasbeehs
+    func submitCompoundChain(tasbeehId: Int) {
+        let chainData = selectedTasbeehs.map {
+            CompoundTasbeehLink(Tasbeeh_id: tasbeehId, Existing_Tasbeehid: $0.id)
+        }
+
+        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/chaintasbeeh") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONEncoder().encode(chainData)
+        } catch {
+            alertError = AlertError(message: "Encoding chain error")
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    self.alertError = AlertError(message: "Error: \(error.localizedDescription)")
+                } else if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    self.alertError = AlertError(message: "Compound Tasbeeh created successfully ✅")
+                    self.cancelCompoundMode()
+                    self.fetchTasbeehs()
+                } else {
+                    self.alertError = AlertError(message: "Failed to save compound chain.")
+                }
             }
         }.resume()
     }
 }
 
-// MARK: - Preview
 struct AllTasbeehView_Previews: PreviewProvider {
     static var previews: some View {
         AllTasbeehView(userId: 1)

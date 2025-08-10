@@ -1,232 +1,313 @@
+//import SwiftUI
+//
+//// MARK: - Model
+//struct TasbeehCounterModel {
+//    let title: String
+//    let arabicText: String
+//    let currentCount: Int
+//    let totalCount: Int
+//}
+//
+//// MARK: - View
+//struct TasbeehCounterView: View {
+//    let tasbeeh: TasbeehCounterModel
+//    @State private var count: Int
+//    @State private var progress: CGFloat = 0
+//
+//    init(tasbeeh: TasbeehCounterModel) {
+//        self.tasbeeh = tasbeeh
+//        _count = State(initialValue: tasbeeh.currentCount)
+//        _progress = State(initialValue: CGFloat(tasbeeh.currentCount) / CGFloat(tasbeeh.totalCount))
+//    }
+//
+//    var body: some View {
+//        VStack(spacing: 20) {
+//            // Top Title + Menu (No back button)
+//            HStack {
+//                Spacer()
+//                Text(tasbeeh.title)
+//                    .font(.title2)
+//                    .fontWeight(.bold)
+//                Spacer()
+//                Menu {
+//                    Button("Progress") {
+//                        print("Progress tapped")
+//                    }
+//
+//                    Button(role: .destructive) {
+//                        print("Close Tasbeeh tapped")
+//                    } label: {
+//                        Text("Close Tasbeeh")
+//                            .foregroundColor(.red)
+//                    }
+//                } label: {
+//                    Image(systemName: "slider.horizontal.3")
+//                        .font(.title2)
+//                        .foregroundColor(.black)
+//                }
+//            }
+//            .padding(.horizontal)
+//
+//            // Circular Progress View
+//            VStack {
+//                ZStack {
+//                    Circle()
+//                        .stroke(Color.gray.opacity(0.2), lineWidth: 15)
+//
+//                    Circle()
+//                        .trim(from: 0, to: progress)
+//                        .stroke(Color.blue, style: StrokeStyle(lineWidth: 15, lineCap: .round))
+//                        .rotationEffect(.degrees(-90))
+//
+//                    Text("\(Int(progress * 100))%")
+//                        .font(.title)
+//                        .fontWeight(.bold)
+//                }
+//                .frame(width: 140, height: 140)
+//
+//                Text("\(count) / \(tasbeeh.totalCount)")
+//                    .font(.headline)
+//            }
+//
+//            // Progress dots
+//            HStack(spacing: 12) {
+//                ForEach(0..<7, id: \.self) { i in
+//                    Circle()
+//                        .fill(i < (count * 7 / max(tasbeeh.totalCount, 1)) ? Color.blue : Color.gray.opacity(0.3))
+//                        .frame(width: 12, height: 12)
+//                }
+//            }
+//
+//            // Arabic Tasbeeh text with counts
+//            HStack(spacing: 10) {
+//                Text("\(count)")
+//                    .font(.headline)
+//                    .foregroundColor(.white)
+//                    .padding()
+//                    .background(Circle().fill(Color.blue))
+//
+//                Text(tasbeeh.arabicText)
+//                    .multilineTextAlignment(.center)
+//                    .font(.system(size: 20))
+//                    .foregroundColor(.black)
+//
+//                Text("\(tasbeeh.totalCount)")
+//                    .font(.headline)
+//                    .foregroundColor(.white)
+//                    .padding()
+//                    .background(Circle().fill(Color.blue))
+//            }
+//            .padding()
+//            .background(Color.white)
+//            .cornerRadius(12)
+//            .shadow(radius: 2)
+//            .padding(.horizontal)
+//
+//            Spacer()
+//
+//            // Large Count Button
+//            Button(action: {
+//                if count < tasbeeh.totalCount {
+//                    count += 1
+//                    withAnimation {
+//                        progress = CGFloat(count) / CGFloat(tasbeeh.totalCount)
+//                    }
+//                }
+//            }) {
+//                Text("Count")
+//                    .font(.title)
+//                    .fontWeight(.bold)
+//                    .frame(maxWidth: .infinity)
+//                    .frame(height: 150)
+//                    .background(Color.blue.opacity(0.8))
+//                    .foregroundColor(.white)
+//            }
+//        }
+//        .padding(.top)
+//        .background(Color(.systemGray6))
+//        .ignoresSafeArea(edges: .bottom)
+//    }
+//}
+//
+//// MARK: - Preview
+//struct TasbeehCounterView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        TasbeehCounterView(tasbeeh: TasbeehCounterModel(
+//            title: "Tasbeeh Fatima",
+//            arabicText: "سُبْحَانَ ٱللَّٰهِ وَبِحَمْدِهِ",
+//            currentCount: 5,
+//            totalCount: 33
+//        ))
+//    }
+//}
+//
+
+
+
 import SwiftUI
 
-// MARK: - TasbeehDetailItem Model
-struct TasbeehDetailItem: Identifiable {
-    var id: Int
-    var text: String // Text for the Tasbeeh item
-    var count: Int   // Count for this Tasbeeh item
+// MARK: - Model
+struct TasbeehCounterModel {
+    let title: String
+    let arabicText: String
+    let currentCount: Int
+    let totalCount: Int
+    let tasbeehId: Int
+    let groupId: Int
+    let userId: Int
+    let adminId: Int
 }
 
-// MARK: - TasbeehLog Model (for progress log) - Conform to Decodable
-struct TasbeehLog: Identifiable, Decodable {
-    var id: Int
-    var current: Int
-    var goal: Int
-    var note: String?
-}
-
-// Circular Progress View
-struct CircularProgress: View {
-    var progress: CGFloat
-    var size: CGFloat = 150
-    var strokeWidth: CGFloat = 10
-    
-    var body: some View {
-        ZStack {
-            let radius = (size - strokeWidth) / 2
-            let circumference = radius * 2 * .pi
-            let strokeDashOffset = circumference - (progress / 100) * circumference
-            
-            // Background circle
-            Circle()
-                .stroke(Color.gray.opacity(0.8), lineWidth: strokeWidth)
-                .frame(width: size, height: size)
-            
-            // Progress circle
-            Circle()
-                .trim(from: 0, to: progress / 100)
-                .stroke(Color.blue, style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round))
-                .rotationEffect(.degrees(-90)) // Corrected this line
-                .frame(width: size, height: size)
-            
-            Text("\(Int(progress))%")
-                .font(.title2)
-                .bold()
-                .foregroundColor(.black)
-        }
-    }
-}
-
-// Main View for Tasbeeh Group
-struct TasbeehGroup: View {
-    var groupid: Int
-    var Userid: Int
-    var tasbeehid: Int
-    var title: String
-    
+// MARK: - View
+struct TasbeehCounterView: View {
+    let tasbeeh: TasbeehCounterModel
+    @State private var count: Int
     @State private var progress: CGFloat = 0
-    @State private var savedProgress: TasbeehLog? = nil
-    @State private var itemProgress: [Int: Int] = [:]
-    @State private var loading: Bool = true
-    @State private var showOptions = false
-    @State private var tasbeehdeatiles: [TasbeehDetailItem] = []
-    @State private var showModal = false
-    @State private var isSaving: Bool = false
-    @State private var saveError: Bool = false
-    @State private var notes: String = ""
-    @State private var showReminderModal = false
-    @State private var isChainComplete = false
-    @State private var showModalForCloseTasbeeh = false
-    @State private var currentTasbeehType: String = ""
-    @Environment(\.presentationMode) var presentationMode
-    
-    // Fetch the tasbeeh details from the backend
-    func fetchTasbeehDetails() {
-        let url = URL(string: "https://yourapi.com/fetchtasbeehlog?UserId=\(Userid)&groupid=\(groupid)&tasbeehid=\(tasbeehid)")!
-        URLSession.shared.dataTask(with: url) { data, _, error in
-            if let data = data, error == nil {
-                let decoder = JSONDecoder()
-                if let result = try? decoder.decode(TasbeehLog.self, from: data) {
-                    DispatchQueue.main.async {
-                        self.savedProgress = result
-                        self.progress = CGFloat(result.current) / CGFloat(result.goal) * 100
-                    }
-                }
-            }
-        }.resume()
-    }
-    
-    // Increment the progress by 1
-    func incrementProgress(for item: TasbeehDetailItem) {
-        guard let activeIndex = tasbeehdeatiles.firstIndex(where: { $0.id == item.id }) else {
-            handleChainCompletion()
-            return
-        }
+    @State private var showProgressScreen = false
 
-        itemProgress[activeIndex, default: 0] += 1
-        saveProgress()
+    init(tasbeeh: TasbeehCounterModel) {
+        self.tasbeeh = tasbeeh
+        _count = State(initialValue: tasbeeh.currentCount)
+        _progress = State(initialValue: CGFloat(tasbeeh.currentCount) / CGFloat(tasbeeh.totalCount))
+    }
 
-        // Check if item is completed
-        if itemProgress[activeIndex]! >= tasbeehdeatiles[activeIndex].count {
-            checkChainCompletion()
-        }
-    }
-    
-    func checkChainCompletion() {
-        isChainComplete = tasbeehdeatiles.allSatisfy { item in
-            (itemProgress[item.id] ?? 0) >= item.count
-        }
-    }
-    
-    // Handle chain completion (when all tasks are done)
-    func handleChainCompletion() {
-        // Implement logic for completing chain, e.g., resetting the progress and notifying server
-        print("Chain Completed!")
-    }
-    
-    // Save progress to AsyncStorage or server
-    func saveProgress() {
-        // Replace with your API call or local storage logic
-        print("Progress saved: \(itemProgress)")
-    }
-    
-    // Close Tasbeeh (Button)
-    func closeTasbeeh() {
-        // API call to close tasbeeh
-        print("Closing Tasbeeh")
-        // After closing tasbeeh
-        presentationMode.wrappedValue.dismiss()
-    }
-    
-    // Modal actions for options
-    func toggleOptions() {
-        showOptions.toggle()
-    }
-    
-    // Modal actions for closing tasbeeh
-    func closeModal() {
-        showModalForCloseTasbeeh.toggle()
-    }
-    
     var body: some View {
-        VStack {
-            HStack {
-                Button(action: {
-                    presentationMode.wrappedValue.dismiss() // Navigate back
-                }) {
-                    Image(systemName: "arrow.backward.circle.fill")
-                        .resizable()
-                        .frame(width: 40, height: 40)
-                }
-                Spacer()
-                Text(title)
-                    .font(.title)
-                    .bold()
-                    .padding()
-                Spacer()
-                Button(action: toggleOptions) {
-                    Image(systemName: "ellipsis.circle")
-                        .resizable()
-                        .frame(width: 30, height: 30)
-                }
-            }
-            .padding()
-
-            CircularProgress(progress: progress)
-            
-            Text("Tasbeeh Fatiha")
-                .font(.title3)
-                .padding()
-
-            // Progress text
-            Text("\(progress)% Completed")
-
-            List(tasbeehdeatiles, id: \.id) { item in
+        NavigationStack {
+            VStack(spacing: 20) {
+                // Top Title + Menu
                 HStack {
-                    Text(item.text)
                     Spacer()
-                    Text("\(item.count)")
-                    Button(action: {
-                        incrementProgress(for: item)
-                    }) {
-                        Text("Increment")
-                            .foregroundColor(.blue)
-                            .padding()
+                    Text(tasbeeh.title)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Spacer()
+                    Menu {
+                        Button("Progress") {
+                            showProgressScreen = true
+                        }
+
+                        Button(role: .destructive) {
+                            print("Close Tasbeeh tapped")
+                        } label: {
+                            Text("Close Tasbeeh")
+                                .foregroundColor(.red)
+                        }
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.title2)
+                            .foregroundColor(.black)
                     }
                 }
-            }
-            
-            Spacer()
+                .padding(.horizontal)
 
-            // Floating Action Button (FAB) for actions
-            Button(action: closeModal) {
-                Text("Close Tasbeeh")
-                    .foregroundColor(.white)
-                    .frame(width: 200, height: 60)
-                    .background(Color.red)
-                    .cornerRadius(30)
-                    .font(.title2)
-            }
-            .padding()
+                // Navigation Trigger
+                NavigationLink(
+                    destination: TasbeehProgressView(
+                        groupid: tasbeeh.groupId,
+                        userId: tasbeeh.userId,
+                        adminId: tasbeeh.adminId,
+                        tasbeehId: tasbeeh.tasbeehId,
+                        title: tasbeeh.title
+                    ),
+                    isActive: $showProgressScreen
+                ) {
+                    EmptyView()
+                }
 
-            // Modal for showing options
-            if showOptions {
+                // Circular Progress View
                 VStack {
-                    Text("Progress")
-                    Text("Close Tasbeeh")
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 15)
+
+                        Circle()
+                            .trim(from: 0, to: progress)
+                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 15, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+
+                        Text("\(Int(progress * 100))%")
+                            .font(.title)
+                            .fontWeight(.bold)
+                    }
+                    .frame(width: 140, height: 140)
+
+                    Text("\(count) / \(tasbeeh.totalCount)")
+                        .font(.headline)
+                }
+
+                // Progress dots
+                HStack(spacing: 12) {
+                    ForEach(0..<7, id: \.self) { i in
+                        Circle()
+                            .fill(i < (count * 7 / max(tasbeeh.totalCount, 1)) ? Color.blue : Color.gray.opacity(0.3))
+                            .frame(width: 12, height: 12)
+                    }
+                }
+
+                // Arabic Tasbeeh with Count
+                HStack(spacing: 10) {
+                    Text("\(count)")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Circle().fill(Color.blue))
+
+                    Text(tasbeeh.arabicText)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 20))
+                        .foregroundColor(.black)
+
+                    Text("\(tasbeeh.totalCount)")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Circle().fill(Color.blue))
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(radius: 2)
+                .padding(.horizontal)
+
+                Spacer()
+
+                // Count Button
+                Button(action: {
+                    if count < tasbeeh.totalCount {
+                        count += 1
+                        withAnimation {
+                            progress = CGFloat(count) / CGFloat(tasbeeh.totalCount)
+                        }
+                    }
+                }) {
+                    Text("Count")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 150)
+                        .background(Color.blue.opacity(0.8))
+                        .foregroundColor(.white)
                 }
             }
-        }
-        .onAppear {
-            fetchTasbeehDetails()
-        }
-        .sheet(isPresented: $showModalForCloseTasbeeh) {
-            VStack {
-                Text("Are you sure you want to close this Tasbeeh?")
-                Button("Yes") {
-                    closeTasbeeh()
-                }
-                Button("No") {
-                    showModalForCloseTasbeeh.toggle()
-                }
-            }
+            .padding(.top)
+            .background(Color(.systemGray6))
+            .ignoresSafeArea(edges: .bottom)
         }
     }
 }
 
-struct TasbeehGroup_Previews: PreviewProvider {
+// MARK: - Preview
+struct TasbeehCounterView_Previews: PreviewProvider {
     static var previews: some View {
-        TasbeehGroup(groupid: 1, Userid: 1, tasbeehid: 1, title: "Tasbeeh Fatiha")
+        TasbeehCounterView(tasbeeh: TasbeehCounterModel(
+            title: "Tasbeeh Fatima",
+            arabicText: "سُبْحَانَ ٱللَّٰهِ وَبِحَمْدِهِ",
+            currentCount: 5,
+            totalCount: 33,
+            tasbeehId: 200,
+            groupId: 1,
+            userId: 101,
+            adminId: 100
+        ))
     }
 }
-
