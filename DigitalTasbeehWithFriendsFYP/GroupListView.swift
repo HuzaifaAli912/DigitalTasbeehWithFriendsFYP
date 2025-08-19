@@ -21,7 +21,7 @@ struct SingleTasbeehModel: Identifiable, Codable {
 }
 
 // MARK: - Unified Display Model
-struct TasbeehModel: Identifiable {
+struct TasbeehModel: Identifiable, Equatable {
     let id: Int
     let title: String
     let type: String // "group" or "single"
@@ -30,9 +30,11 @@ struct TasbeehModel: Identifiable {
 // MARK: - Main View
 struct GroupListView: View {
     let userId: Int
+
     @State private var tasbeehList: [TasbeehModel] = []
+    @State private var searchText: String = ""          // ✅ added
     @State private var navigateToCreate = false
-    @Environment(\.presentationMode) var presentationMode   // ✅ Back navigation
+    @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
         NavigationStack {
@@ -40,43 +42,57 @@ struct GroupListView: View {
 
                 // ✅ Back Button Row
                 HStack {
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .foregroundColor(.blue)
-                            .font(.title2)
-                            .padding(.trailing, 4)
-                        Text("Back")
-                            .foregroundColor(.blue)
-                            .font(.headline)
+                    Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .foregroundColor(.blue)
+                                .font(.title2)
+                            Text("Back")
+                                .foregroundColor(.blue)
+                                .font(.headline)
+                        }
                     }
                     Spacer()
                 }
                 .padding(.top, 10)
                 .padding(.horizontal)
 
+                // Title
                 Text("All Groups/Single")
                     .font(.title2)
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 10)
 
+                // ✅ Search Bar
+                TextField("Search group or single…", text: $searchText)
+                    .padding(10)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                    .padding([.horizontal, .top])
+
+                // List
                 ScrollView {
                     VStack(spacing: 15) {
-                        ForEach(tasbeehList) { item in
-                            if item.type == "group" {
-                                NavigationLink(destination: AllGroupTasbeehView(groupId: item.id, userId: userId, groupName: item.title)) {
+                        if filteredList.isEmpty {
+                            Text(searchText.isEmpty ? "No items found." : "No matches for \"\(searchText)\".")
+                                .foregroundColor(.gray)
+                                .padding(.top, 20)
+                        } else {
+                            ForEach(filteredList) { item in
+                                if item.type == "group" {
+                                    NavigationLink(destination: AllGroupTasbeehView(groupId: item.id, userId: userId, groupName: item.title)) {
+                                        GroupItemView(
+                                            icon: "person.3.fill",
+                                            title: item.title
+                                        )
+                                    }
+                                } else {
                                     GroupItemView(
-                                        icon: "person.3.fill",
+                                        icon: "person.fill",
                                         title: item.title
                                     )
                                 }
-                            } else {
-                                GroupItemView(
-                                    icon: "person.fill",
-                                    title: item.title
-                                )
                             }
                         }
                     }
@@ -86,11 +102,10 @@ struct GroupListView: View {
 
                 Spacer()
 
+                // FAB
                 HStack {
                     Spacer()
-                    Button(action: {
-                        self.navigateToCreate = true
-                    }) {
+                    Button(action: { self.navigateToCreate = true }) {
                         Image(systemName: "plus")
                             .font(.title)
                             .foregroundColor(.white)
@@ -106,10 +121,20 @@ struct GroupListView: View {
                     }
                 }
             }
-            .navigationBarBackButtonHidden(true) // hide default back
-            .onAppear {
-                fetchAllTasbeehs()
-            }
+            .navigationBarBackButtonHidden(true)
+            .onAppear { fetchAllTasbeehs() }
+        }
+    }
+
+    // MARK: - Filtering
+    private var filteredList: [TasbeehModel] {
+        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return tasbeehList }
+
+        return tasbeehList.filter { item in
+            // match title OR type keyword
+            item.title.lowercased().contains(q)
+            || item.type.lowercased().contains(q) // lets you type "group" or "single"
         }
     }
 
@@ -185,9 +210,9 @@ struct GroupItemView: View {
         .padding()
         .background(Color.blue.opacity(0.3))
         .cornerRadius(12)
+        .contentShape(Rectangle())
     }
 }
-
 
 // MARK: - Preview
 struct GroupListView_Previews: PreviewProvider {
@@ -195,3 +220,4 @@ struct GroupListView_Previews: PreviewProvider {
         GroupListView(userId: 1)
     }
 }
+

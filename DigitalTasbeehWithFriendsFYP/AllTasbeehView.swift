@@ -9,12 +9,50 @@ struct TasbeehItem: Identifiable, Codable, Equatable {
     let id: Int
     let title: String
     let type: String
+    var isFavorite: Bool   // ✅ added
 
     enum CodingKeys: String, CodingKey {
         case id = "ID"
         case title = "Tasbeeh_Title"
         case type = "Type"
+        case isFavorite = "IsFavorite"      // primary backend key
+        case isFavoriteLower = "isFavorite" // decode-only fallback
+        case isFavouriteUK   = "IsFavourite"// decode-only fallback
     }
+
+    // Robust Decodable
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id    = try c.decode(Int.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        type  = (try? c.decode(String.self, forKey: .type)) ?? ""
+
+        func decodeBool(for key: CodingKeys) -> Bool? {
+            if let b = try? c.decode(Bool.self, forKey: key) { return b }
+            if let i = try? c.decode(Int.self, forKey: key)   { return i != 0 }
+            if let s = try? c.decode(String.self, forKey: key) {
+                let v = s.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return v == "true" || v == "1" || v == "yes"
+            }
+            return nil
+        }
+        isFavorite = decodeBool(for: .isFavorite)
+                  ?? decodeBool(for: .isFavoriteLower)
+                  ?? decodeBool(for: .isFavouriteUK)
+                  ?? false
+    }
+
+    // Custom Encodable (so extra decode-only keys don't break Encodable)
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(title, forKey: .title)
+        try c.encode(type, forKey: .type)
+        try c.encode(isFavorite, forKey: .isFavorite)
+    }
+
+    // Keep Equatable stable by id (so selection isn't affected by isFavorite changes)
+    static func == (lhs: TasbeehItem, rhs: TasbeehItem) -> Bool { lhs.id == rhs.id }
 }
 
 struct CompoundTasbeehLink: Codable {
@@ -34,6 +72,13 @@ struct CreateCompoundTitlePayload: Codable {
     }
 }
 
+// ✅ Simple filter enum for the segmented control
+enum TasbeehFilter: String, CaseIterable, Identifiable {
+    case all = "All"
+    case favourite = "Favourite"
+    var id: String { rawValue }
+}
+
 struct AllTasbeehView: View {
     let userId: Int
 
@@ -45,6 +90,12 @@ struct AllTasbeehView: View {
     @State private var isCompoundMode = false
     @State private var selectedTasbeehs: [TasbeehItem] = []
     @State private var compoundTitle: String = ""
+
+    // Favorite toggle busy flag (per id)
+    @State private var favBusyId: Int? = nil
+
+    // ✅ Current tab (All / Favourite)
+    @State private var filterTab: TasbeehFilter = .all
 
     var body: some View {
         NavigationStack {
@@ -76,9 +127,21 @@ struct AllTasbeehView: View {
                     .cornerRadius(10)
                     .padding([.horizontal, .top])
 
-                Text("All Tasbeeh")
-                    .font(.title2)
-                    .fontWeight(.bold)
+                // Title + Segmented filter
+                VStack(spacing: 8) {
+                    Text("All Tasbeeh")
+                        .font(.title2)
+                        .fontWeight(.bold)
+
+                    // ✅ Segmented control: All / Favourite
+                    Picker("Filter", selection: $filterTab) {
+                        ForEach(TasbeehFilter.allCases) { tab in
+                            Text(tab.rawValue).tag(tab)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                }
 
                 if isLoading {
                     ProgressView()
@@ -90,7 +153,7 @@ struct AllTasbeehView: View {
                         ForEach(filteredTasbeehs) { tasbeeh in
                             // Wrap the entire HStack in a NavigationLink to make it tappable
                             NavigationLink(
-                                destination: TasbeehDetails(tasbeehId: tasbeeh.id) // Navigate to TasbeehDetails
+                                destination: TasbeehDetailsView(tasbeehId: tasbeeh.id)
                             ) {
                                 HStack {
                                     VStack(alignment: .leading) {
@@ -104,20 +167,36 @@ struct AllTasbeehView: View {
 
                                     Spacer()
 
+                                    // Delete (unchanged)
                                     Button(action: {
                                         deleteTasbeeh(id: tasbeeh.id)
                                     }) {
                                         Image(systemName: "trash")
                                             .foregroundColor(.red)
                                     }
+                                    .buttonStyle(.plain) // ✅ ensure NavigationLink doesn't steal tap
+
+                                    // Favorite (fixed)
+                                    Button(action: {
+                                        toggleFavorite(tasbeeh)   // optimistic UI inside
+                                    }) {
+                                        // read live state by id so it reflects immediately
+                                        let isFav = tasbeehs.first(where: { $0.id == tasbeeh.id })?.isFavorite ?? false
+                                        Image(systemName: isFav ? "heart.fill" : "heart")
+                                            .foregroundColor(isFav ? .red : .white)
+                                    }
+                                    .buttonStyle(.plain)   // ✅ critical on iOS
+                                    .disabled(favBusyId == tasbeeh.id)
                                 }
                                 .padding()
                                 .background(
-                                    selectedTasbeehs.contains(tasbeeh) && isCompoundMode
+                                    // ⬅️ FIXED: single-expression ternary (no multi-statement closure)
+                                    (selectedTasbeehs.contains(tasbeeh) && isCompoundMode)
                                     ? Color.green.opacity(0.3)
                                     : Color.blue.opacity(0.3)
                                 )
                                 .cornerRadius(12)
+                                .contentShape(Rectangle()) // ✅ clean hit-testing; no behavior change
                                 .onTapGesture {
                                     if isCompoundMode {
                                         if selectedTasbeehs.contains(tasbeeh) {
@@ -208,12 +287,17 @@ struct AllTasbeehView: View {
         }
     }
 
+    // ✅ Apply Favourite filter + search
     var filteredTasbeehs: [TasbeehItem] {
-        if searchText.isEmpty {
-            return tasbeehs
-        } else {
-            return tasbeehs.filter { $0.title.lowercased().contains(searchText.lowercased()) }
+        var list = tasbeehs
+        if filterTab == .favourite {
+            list = list.filter { $0.isFavorite }
         }
+        if !searchText.isEmpty {
+            let q = searchText.lowercased()
+            list = list.filter { $0.title.lowercased().contains(q) }
+        }
+        return list
     }
 
     func fetchTasbeehs() {
@@ -351,6 +435,52 @@ struct AllTasbeehView: View {
                     self.fetchTasbeehs()
                 } else {
                     self.alertError = AlertError(message: "Failed to save compound chain.")
+                }
+            }
+        }.resume()
+    }
+
+    // Favorite toggle
+    func toggleFavorite(_ tasbeeh: TasbeehItem) {
+        guard let idx = tasbeehs.firstIndex(where: { $0.id == tasbeeh.id }) else { return }
+        let newValue = !tasbeehs[idx].isFavorite
+        let tasbeehId = tasbeeh.id   // ✅ capture only the id
+
+        // ✅ optimistic UI — update immediately (with a tiny animation)
+        withAnimation(.easeInOut(duration: 0.12)) {
+            tasbeehs[idx].isFavorite = newValue
+        }
+        favBusyId = tasbeehId
+
+        guard let url = URL(string:
+            "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/SetFavorite?userid=\(userId)&tasbeehId=\(tasbeehId)&isFavorite=\(newValue)"
+        ) else {
+            favBusyId = nil
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        URLSession.shared.dataTask(with: request) { data, resp, err in
+            DispatchQueue.main.async {
+                favBusyId = nil
+                if let err = err {
+                    // rollback on error
+                    if let i = tasbeehs.firstIndex(where: { $0.id == tasbeehId }) {
+                        tasbeehs[i].isFavorite.toggle()
+                    }
+                    alertError = AlertError(message: "Favorite error: \(err.localizedDescription)")
+                    return
+                }
+                guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                    if let i = tasbeehs.firstIndex(where: { $0.id == tasbeehId }) {
+                        tasbeehs[i].isFavorite.toggle()
+                    }
+                    let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+                    let body = String(data: data ?? Data(), encoding: .utf8) ?? ""
+                    alertError = AlertError(message: "Favorite failed (HTTP \(code)): \(body)")
+                    return
                 }
             }
         }.resume()
