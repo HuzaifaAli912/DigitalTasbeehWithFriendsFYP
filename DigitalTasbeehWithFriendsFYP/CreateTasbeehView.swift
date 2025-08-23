@@ -58,6 +58,9 @@ struct CreateTasbeehView: View {
     @State private var showAlert = false
     @State private var alertMessage: String = ""
 
+    // Navigation to "Create from Existing Tasbeehs"
+    @State private var navigateToCreateFromExisting = false
+
     let surahData: [Surah] = [
         Surah(id: "1", title: "Al-Fatiha", ayahs: Array(1...7)),
         Surah(id: "2", title: "Al-Baqarah", ayahs: Array(1...286)),
@@ -73,6 +76,13 @@ struct CreateTasbeehView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
+                // Hidden NavigationLink for programmatic navigation
+                NavigationLink(
+                    destination: CreateFromExistingTasbeehView(userId: userId),
+                    isActive: $navigateToCreateFromExisting
+                ) { EmptyView() }
+                .hidden()
+
                 VStack(spacing: 12) {
                     TextField("Enter Tasbeeh Title", text: $tasbeehTitle)
                         .padding()
@@ -111,10 +121,10 @@ struct CreateTasbeehView: View {
                             .background(Color.gray.opacity(0.1))
                             .cornerRadius(10)
 
-//                        Button("Add Quran Tasbeeh") {
-//                            addQuranItem()
-//                        }
-//                        .buttonStyle(.borderedProminent)
+                        // Buttons commented out as in your original code
+                        // Button("Add Quran Tasbeeh") { addQuranItem() }
+                        // .buttonStyle(.borderedProminent)
+
                     } else {
                         TextField("Wazifa Text", text: $wazifaText)
                             .padding()
@@ -127,10 +137,8 @@ struct CreateTasbeehView: View {
                             .background(Color.gray.opacity(0.1))
                             .cornerRadius(10)
 
-//                        Button("Add Wazifa Tasbeeh") {
-//                            addWazifaItem()
-//                        }
-//                        .buttonStyle(.borderedProminent)
+                        // Button("Add Wazifa Tasbeeh") { addWazifaItem() }
+                        // .buttonStyle(.borderedProminent)
                     }
 
                     Divider()
@@ -163,8 +171,27 @@ struct CreateTasbeehView: View {
                 .padding()
             }
             .navigationTitle("Create Tasbeeh")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {   // ✅ FIXED: was .topBarTrailing
+                    Menu {
+                        Button {
+                            navigateToCreateFromExisting = true
+                        } label: {
+                            Label("Create from Existing Tasbeehs", systemImage: "square.stack.3d.down.right")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .imageScale(.large)
+                            .accessibilityLabel("More options")
+                    }
+                }
+            }
             .alert(isPresented: $showAlert) {
-                Alert(title: Text("Message"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
+                Alert(
+                    title: Text("Message"),
+                    message: Text(alertMessage),
+                    dismissButton: .default(Text("OK"))
+                )
             }
         }
     }

@@ -52,9 +52,20 @@ struct NotificationView: View {
     @State private var tasbeehRequests: [TasbeehRequestNotification] = []
     @State private var memberLeftNotifications: [MemberLeftNotification] = []
 
+    // Alerts
+    @State private var alertMsg: String? = nil
+    @State private var showAlert: Bool = false
+
+    // Per-item busy state (disable Accept/Reject while calling API)
+    @State private var busyRequestIds: Set<Int> = []
+
+    // Base URL
+    private let base = "http://192.168.137.1/DigitalTasbeehWithFriendsApi"
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+
                 // Tasbeeh Request Notifications
                 ForEach(tasbeehRequests) { notif in
                     VStack(alignment: .leading, spacing: 10) {
@@ -63,8 +74,12 @@ struct NotificationView: View {
                                 .font(.headline)
                                 .foregroundColor(.blue)
                             Spacer()
-                            Image(systemName: "info.circle")
-                                .foregroundColor(.blue)
+                            if busyRequestIds.contains(notif.id) {
+                                ProgressView().scaleEffect(0.9)
+                            } else {
+                                Image(systemName: "info.circle")
+                                    .foregroundColor(.blue)
+                            }
                         }
 
                         Text("\(notif.groupTitle) sent you a request to read \(notif.tasbeehname.title) (count: \(notif.count))")
@@ -72,23 +87,21 @@ struct NotificationView: View {
                             .foregroundColor(.primary)
 
                         HStack(spacing: 20) {
-                            Button(action: {
-                                // Accept action
-                            }) {
+                            Button(action: { acceptTasbeehRequest(notif) }) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .resizable()
                                     .frame(width: 35, height: 35)
                                     .foregroundColor(.green)
                             }
+                            .disabled(busyRequestIds.contains(notif.id))
 
-                            Button(action: {
-                                // Reject action
-                            }) {
+                            Button(action: { rejectTasbeehRequest(notif) }) {
                                 Image(systemName: "nosign")
                                     .resizable()
                                     .frame(width: 35, height: 35)
                                     .foregroundColor(.red)
                             }
+                            .disabled(busyRequestIds.contains(notif.id))
                         }
                     }
                     .padding()
@@ -110,7 +123,7 @@ struct NotificationView: View {
                             .foregroundColor(.primary)
 
                         Button(action: {
-                            // Reassign action
+                            // TODO: wire reassign endpoint if needed
                         }) {
                             Text("Reassign")
                                 .frame(maxWidth: .infinity)
@@ -136,46 +149,147 @@ struct NotificationView: View {
             fetchTasbeehRequests()
             fetchMemberLeftNotifications()
         }
+        .alert("Message", isPresented: $showAlert) {
+            Button("OK", role: .cancel) { alertMsg = nil }
+        } message: {
+            Text(alertMsg ?? "")
+        }
     }
 
-    // MARK: - API Calls
+    // MARK: - API Calls (Fetch)
 
     func fetchTasbeehRequests() {
-        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/User/Showallrequest?userId=\(userId)") else { return }
+        guard let url = URL(string: "\(base)/api/User/Showallrequest?userId=\(userId)") else { return }
 
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.shared.dataTask(with: url) { data, _, _ in
             if let data = data {
                 do {
-                    let raw = try JSONSerialization.jsonObject(with: data)
-                    print("🔵 Tasbeeh Raw JSON:", raw)
+                    // Debug (optional)
+                    // let raw = try JSONSerialization.jsonObject(with: data)
+                    // print("🔵 Tasbeeh Raw JSON:", raw)
 
                     let decoded = try JSONDecoder().decode([TasbeehRequestNotification].self, from: data)
                     DispatchQueue.main.async {
                         self.tasbeehRequests = decoded
                     }
                 } catch {
-                    print("❌ Tasbeeh Decode Error:", error)
+                    DispatchQueue.main.async {
+                        self.alertMsg = "Failed to load requests: \(error.localizedDescription)"
+                        self.showAlert = true
+                    }
                 }
             }
         }.resume()
     }
 
     func fetchMemberLeftNotifications() {
-        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/User/Allleavegroupmember?userId=\(userId)") else { return }
+        guard let url = URL(string: "\(base)/api/User/Allleavegroupmember?userId=\(userId)") else { return }
 
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.shared.dataTask(with: url) { data, _, _ in
             if let data = data {
                 do {
-                    let raw = try JSONSerialization.jsonObject(with: data)
-                    print("🟣 Left Raw JSON:", raw)
+                    // Debug (optional)
+                    // let raw = try JSONSerialization.jsonObject(with: data)
+                    // print("🟣 Left Raw JSON:", raw)
 
                     let decoded = try JSONDecoder().decode([MemberLeftNotification].self, from: data)
                     DispatchQueue.main.async {
                         self.memberLeftNotifications = decoded
                     }
                 } catch {
-                    print("❌ Left Decode Error:", error)
+                    DispatchQueue.main.async {
+                        self.alertMsg = "Failed to load member-left: \(error.localizedDescription)"
+                        self.showAlert = true
+                    }
                 }
+            }
+        }.resume()
+    }
+
+    // MARK: - API Calls (Actions)
+
+    /// Accept request → call API → on success, remove from list (optimistic UI with rollback)
+    func acceptTasbeehRequest(_ notif: TasbeehRequestNotification) {
+        guard !busyRequestIds.contains(notif.id) else { return }
+        busyRequestIds.insert(notif.id)
+
+        // Optimistic UI
+        let oldList = tasbeehRequests
+        tasbeehRequests.removeAll { $0.id == notif.id }
+
+        // TODO: If your backend route/param names differ, replace below path:
+        let path = "\(base)/api/User/Acceptrequest?userId=\(userId)&requestId=\(notif.id)"
+        guard let url = URL(string: path) else {
+            busyRequestIds.remove(notif.id)
+            return
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+
+        URLSession.shared.dataTask(with: req) { data, resp, err in
+            DispatchQueue.main.async {
+                self.busyRequestIds.remove(notif.id)
+
+                if let err = err {
+                    self.tasbeehRequests = oldList
+                    self.alertMsg = "Accept failed: \(err.localizedDescription)"
+                    self.showAlert = true
+                    return
+                }
+                if let http = resp as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                    self.tasbeehRequests = oldList
+                    let body = String(data: data ?? Data(), encoding: .utf8) ?? ""
+                    self.alertMsg = "Accept HTTP \(http.statusCode): \(body)"
+                    self.showAlert = true
+                    return
+                }
+
+                // Optional: refresh list after success
+                // self.fetchTasbeehRequests()
+            }
+        }.resume()
+    }
+
+    /// Reject request → call API → on success, remove from list (optimistic UI with rollback)
+    func rejectTasbeehRequest(_ notif: TasbeehRequestNotification) {
+        guard !busyRequestIds.contains(notif.id) else { return }
+        busyRequestIds.insert(notif.id)
+
+        // Optimistic UI
+        let oldList = tasbeehRequests
+        tasbeehRequests.removeAll { $0.id == notif.id }
+
+        // TODO: If your backend route/param names differ, replace below path:
+        let path = "\(base)/api/User/Rejectrequest?userId=\(userId)&requestId=\(notif.id)"
+        guard let url = URL(string: path) else {
+            busyRequestIds.remove(notif.id)
+            return
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+
+        URLSession.shared.dataTask(with: req) { data, resp, err in
+            DispatchQueue.main.async {
+                self.busyRequestIds.remove(notif.id)
+
+                if let err = err {
+                    self.tasbeehRequests = oldList
+                    self.alertMsg = "Reject failed: \(err.localizedDescription)"
+                    self.showAlert = true
+                    return
+                }
+                if let http = resp as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                    self.tasbeehRequests = oldList
+                    let body = String(data: data ?? Data(), encoding: .utf8) ?? ""
+                    self.alertMsg = "Reject HTTP \(http.statusCode): \(body)"
+                    self.showAlert = true
+                    return
+                }
+
+                // Optional: refresh list after success
+                // self.fetchTasbeehRequests()
             }
         }.resume()
     }
@@ -185,7 +299,9 @@ struct NotificationView: View {
 
 struct NotificationView_Previews: PreviewProvider {
     static var previews: some View {
-        NotificationView(userId: 1)
+        NavigationStack {
+            NotificationView(userId: 1)
+        }
     }
 }
 

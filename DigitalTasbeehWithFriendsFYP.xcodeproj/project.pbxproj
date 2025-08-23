@@ -31,6 +31,8 @@
 		13955A5C2E1CD17100AE7D39 /* CounterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13955A5B2E1CD17100AE7D39 /* CounterView.swift */; };
 		13EC1DD92E3B7BFA00040E23 /* TasbeehProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13EC1DD82E3B7BFA00040E23 /* TasbeehProgress.swift */; };
 		13EC1DDD2E49000600040E23 /* TasbeehDetails.swiftui.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13EC1DDC2E49000600040E23 /* TasbeehDetails.swiftui.swift */; };
+		13EC1DDF2E54E27B00040E23 /* CreateFromExistingTasbeehView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13EC1DDE2E54E27B00040E23 /* CreateFromExistingTasbeehView.swift */; };
+		13EC1DE12E57161900040E23 /* AddingMember.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13EC1DE02E57161900040E23 /* AddingMember.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -59,6 +61,8 @@
 		13955A5B2E1CD17100AE7D39 /* CounterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterView.swift; sourceTree = "<group>"; };
 		13EC1DD82E3B7BFA00040E23 /* TasbeehProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasbeehProgress.swift; sourceTree = "<group>"; };
 		13EC1DDC2E49000600040E23 /* TasbeehDetails.swiftui.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasbeehDetails.swiftui.swift; sourceTree = "<group>"; };
+		13EC1DDE2E54E27B00040E23 /* CreateFromExistingTasbeehView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFromExistingTasbeehView.swift; sourceTree = "<group>"; };
+		13EC1DE02E57161900040E23 /* AddingMember.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddingMember.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +103,7 @@
 				132865872E193D4F0025FA2F /* HomeView.swift */,
 				13955A5B2E1CD17100AE7D39 /* CounterView.swift */,
 				13955A592E1CC0F200AE7D39 /* CreateTasbeehView.swift */,
+				13EC1DDE2E54E27B00040E23 /* CreateFromExistingTasbeehView.swift */,
 				13955A552E1C7B9600AE7D39 /* AssignTasbeehView.swift */,
 				13955A572E1C832300AE7D39 /* ManuallyDistributionView.swift */,
 				13955A512E1C5B2300AE7D39 /* HistoryView.swift */,
@@ -108,6 +113,7 @@
 				138BF1912E1AE1F400B46802 /* AllFriends.swift */,
 				132865892E1959BD0025FA2F /* GroupListView.swift */,
 				13955A4F2E1C0DA900AE7D39 /* AllGroupTasbeehView.swift */,
+				13EC1DE02E57161900040E23 /* AddingMember.swift */,
 				13EC1DD82E3B7BFA00040E23 /* TasbeehProgress.swift */,
 				1328658F2E1960F30025FA2F /* CreateGroupSingleView.swift */,
 				1390D63F2E1A7B0000CC312A /* LoggedInUser.swift */,
@@ -217,6 +223,8 @@
 				132865862E16CA2A0025FA2F /* SignupView.swift in Sources */,
 				13955A542E1C7B6B00AE7D39 /* Anycodable.swift in Sources */,
 				1390D6402E1A7B0000CC312A /* LoggedInUser.swift in Sources */,
+				13EC1DE12E57161900040E23 /* AddingMember.swift in Sources */,
+				13EC1DDF2E54E27B00040E23 /* CreateFromExistingTasbeehView.swift in Sources */,
 				1390D6442E1A856F00CC312A /* SingleModel.swift in Sources */,
 				13955A5C2E1CD17100AE7D39 /* CounterView.swift in Sources */,
 			);
