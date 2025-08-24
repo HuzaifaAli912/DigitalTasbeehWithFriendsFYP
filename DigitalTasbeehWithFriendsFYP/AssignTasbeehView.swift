@@ -20,7 +20,7 @@ struct AssignTasbeehView: View {
     @State private var selectedTasbeeh: String = ""
     @State private var selectedGroupOrSingle: String = ""
     @State private var selectedDay: String = ""
-    @State private var purpose: String = ""
+    
     @State private var deadline: Date = Date()
     @State private var count: String = ""
     @State private var distributionType: String = ""
@@ -58,9 +58,7 @@ struct AssignTasbeehView: View {
                     }
                 }
 
-                Section(header: Text("Purpose")) {
-                    TextField("Enter purpose", text: $purpose)
-                }
+                
 
                 Section(header: Text("Deadline")) {
                     DatePicker("Select date", selection: $deadline, displayedComponents: .date)
@@ -88,7 +86,6 @@ struct AssignTasbeehView: View {
                             tasbeehId: Int(selectedTasbeeh.dropFirst(2)) ?? 0,
                             goal: Int(count) ?? 0,
                             endDate: formattedDate(deadline),
-                            purpose: purpose,
                             schedule: selectedDay,
                             leaverId: nil
                         ),
@@ -176,7 +173,7 @@ struct AssignTasbeehView: View {
                 "Goal": Int(count) ?? 0,
                 "Enddate": formattedDate(deadline),
                 "schedule": selectedDay,
-                "purpose": purpose
+                
             ]
             postRequest(
                 urlString: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/Sigle/Assigntosingletasbeeh",
@@ -189,7 +186,7 @@ struct AssignTasbeehView: View {
                 "Goal": Int(count) ?? 0,
                 "End_date": formattedDate(deadline),
                 "schedule": selectedDay,
-                "purpose": purpose
+                
             ]
             postRequest(
                 urlString: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/AssignTasbeeh/AssignTasbeeh",

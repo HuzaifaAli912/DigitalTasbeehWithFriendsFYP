@@ -19,13 +19,11 @@ struct QuranTasbeehItem: Identifiable, Codable {
     var Ayah_number_from: Int
     var Ayah_number_to: Int
     var Ayah_text: String
-    var Count: Int
 }
 
 struct WazifaTextItem: Identifiable, Codable {
     var id: Int
     var text: String
-    var count: Int
 }
 
 struct CompoundQuranEntry: Codable {
@@ -44,11 +42,11 @@ struct CreateTasbeehView: View {
 
     @State private var tasbeehTitle: String = ""
     @State private var selectedType = "Quran"
-    @State private var count: String = ""
     @State private var selectedSurah: Surah? = nil
     @State private var selectedAyahFrom = ""
     @State private var selectedAyahTo = ""
     @State private var wazifaText = ""
+    @State private var purpose: String = ""  // NEW: Purpose field
 
     @State private var quranItems: [QuranTasbeehItem] = []
     @State private var wazifaItems: [WazifaTextItem] = []
@@ -89,6 +87,12 @@ struct CreateTasbeehView: View {
                         .background(Color.gray.opacity(0.1))
                         .cornerRadius(10)
 
+                    // Purpose field
+                    TextField("Enter Purpose (e.g., Sadaqah Jariyah, Health, Exams)", text: $purpose)
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(10)
+
                     Picker("Select Type", selection: $selectedType) {
                         ForEach(typeOptions, id: \.self) { type in
                             Text(type).tag(type)
@@ -114,31 +118,11 @@ struct CreateTasbeehView: View {
                             .padding()
                             .background(Color.gray.opacity(0.1))
                             .cornerRadius(10)
-
-                        TextField("Count", text: $count)
-                            .keyboardType(.numberPad)
-                            .padding()
-                            .background(Color.gray.opacity(0.1))
-                            .cornerRadius(10)
-
-                        // Buttons commented out as in your original code
-                        // Button("Add Quran Tasbeeh") { addQuranItem() }
-                        // .buttonStyle(.borderedProminent)
-
                     } else {
                         TextField("Wazifa Text", text: $wazifaText)
                             .padding()
                             .background(Color.gray.opacity(0.1))
                             .cornerRadius(10)
-
-                        TextField("Count", text: $count)
-                            .keyboardType(.numberPad)
-                            .padding()
-                            .background(Color.gray.opacity(0.1))
-                            .cornerRadius(10)
-
-                        // Button("Add Wazifa Tasbeeh") { addWazifaItem() }
-                        // .buttonStyle(.borderedProminent)
                     }
 
                     Divider()
@@ -147,11 +131,9 @@ struct CreateTasbeehView: View {
                         VStack(alignment: .leading) {
                             if selectedType == "Quran", let item = item.base as? QuranTasbeehItem {
                                 Text("Surah: \(item.Sura_name) [\(item.Ayah_number_from)-\(item.Ayah_number_to)]")
-                                Text("Count: \(item.Count)").font(.subheadline)
                                 Text("Ayah: \(item.Ayah_text)").font(.caption)
                             } else if selectedType == "Wazifa", let item = item.base as? WazifaTextItem {
                                 Text("Text: \(item.text)")
-                                Text("Count: \(item.count)").font(.subheadline)
                             }
                         }
                         .padding()
@@ -200,8 +182,7 @@ struct CreateTasbeehView: View {
     func addQuranItem() {
         guard let surah = selectedSurah,
               let from = Int(selectedAyahFrom),
-              let to = Int(selectedAyahTo),
-              let cnt = Int(count)
+              let to = Int(selectedAyahTo)
         else {
             alertMessage = "Please fill all Quran fields"
             showAlert = true
@@ -211,8 +192,7 @@ struct CreateTasbeehView: View {
         let params = [
             "surahName": surah.title,
             "ayahNumberFrom": "\(from)",
-            "ayahNumberTo": "\(to)",
-            "count": "\(cnt)"
+            "ayahNumberTo": "\(to)"
         ]
         let query = params.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
 
@@ -232,13 +212,13 @@ struct CreateTasbeehView: View {
     }
 
     func addWazifaItem() {
-        guard !wazifaText.isEmpty, let cnt = Int(count) else {
-            alertMessage = "Please fill Wazifa text and count"
+        guard !wazifaText.isEmpty else {
+            alertMessage = "Please fill Wazifa text"
             showAlert = true
             return
         }
 
-        let body = ["text": wazifaText, "count": cnt] as [String : Any]
+        let body = ["text": wazifaText] as [String : Any]
         guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/Wazifa/Addwazifatext"),
               let data = try? JSONSerialization.data(withJSONObject: body)
         else { return }
@@ -269,7 +249,8 @@ struct CreateTasbeehView: View {
         let titleObj = [
             "Tasbeeh_Title": tasbeehTitle,
             "User_id": userId,
-            "Type": selectedType
+            "Type": selectedType,
+            "Purpose": purpose // NEW: Included purpose
         ] as [String : Any]
 
         guard let titleURL = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/createtasbeehtitle"),

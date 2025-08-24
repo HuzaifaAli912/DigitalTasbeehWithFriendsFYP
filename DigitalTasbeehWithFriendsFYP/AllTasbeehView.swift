@@ -10,6 +10,7 @@ struct TasbeehItem: Identifiable, Codable, Equatable {
     let title: String
     let type: String
     var isFavorite: Bool   // ✅ added
+    var purpose: String?   // NEW: Add Purpose field
 
     enum CodingKeys: String, CodingKey {
         case id = "ID"
@@ -17,7 +18,8 @@ struct TasbeehItem: Identifiable, Codable, Equatable {
         case type = "Type"
         case isFavorite = "IsFavorite"      // primary backend key
         case isFavoriteLower = "isFavorite" // decode-only fallback
-        case isFavouriteUK   = "IsFavourite"// decode-only fallback
+        case isFavouriteUK   = "IsFavourite" // decode-only fallback
+        case purpose = "purpose" // NEW: Ensure "purpose" key matches API response (lowercase)
     }
 
     // Robust Decodable
@@ -26,6 +28,7 @@ struct TasbeehItem: Identifiable, Codable, Equatable {
         id    = try c.decode(Int.self, forKey: .id)
         title = try c.decode(String.self, forKey: .title)
         type  = (try? c.decode(String.self, forKey: .type)) ?? ""
+        purpose = try? c.decode(String.self, forKey: .purpose)  // NEW: Decode Purpose
 
         func decodeBool(for key: CodingKeys) -> Bool? {
             if let b = try? c.decode(Bool.self, forKey: key) { return b }
@@ -49,6 +52,7 @@ struct TasbeehItem: Identifiable, Codable, Equatable {
         try c.encode(title, forKey: .title)
         try c.encode(type, forKey: .type)
         try c.encode(isFavorite, forKey: .isFavorite)
+        try c.encode(purpose, forKey: .purpose)  // NEW: Encode Purpose
     }
 
     // Keep Equatable stable by id (so selection isn't affected by isFavorite changes)
@@ -163,6 +167,17 @@ struct AllTasbeehView: View {
                                         Text(tasbeeh.type)
                                             .font(.caption)
                                             .foregroundColor(.gray)
+
+                                        // Displaying Purpose (New)
+                                        if let purpose = tasbeeh.purpose, !purpose.isEmpty {
+                                            Text(purpose)
+                                                .font(.subheadline)
+                                                .foregroundColor(.blue)
+                                        } else {
+                                            Text("Purpose: null")
+                                                .font(.subheadline)
+                                                .foregroundColor(.gray)
+                                        }
                                     }
 
                                     Spacer()
@@ -295,7 +310,7 @@ struct AllTasbeehView: View {
         }
         if !searchText.isEmpty {
             let q = searchText.lowercased()
-            list = list.filter { $0.title.lowercased().contains(q) }
+            list = list.filter { $0.title.lowercased().contains(q) || ($0.purpose?.lowercased().contains(q) ?? false) }  // Filter by Purpose
         }
         return list
     }

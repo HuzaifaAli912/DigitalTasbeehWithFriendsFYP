@@ -6,7 +6,7 @@ struct ManuallyContributionView: View {
     let tasbeehId: Int
     let goal: Int
     let endDate: String?
-    let purpose: String
+    
     let schedule: String
     let leaverId: Int?
 
@@ -146,7 +146,7 @@ struct ManuallyContributionView: View {
             "Goal": goal,
             "End_date": endDate ?? "",
             "schedule": schedule,
-            "Purpose": purpose
+            
         ]
 
         postRequest(urlString: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/AssignTasbeeh/AssignTasbeeh",
@@ -220,7 +220,7 @@ struct ManuallyContributionView_Previews: PreviewProvider {
             tasbeehId: 1,
             goal: 90,
             endDate: "2025/12/31",
-            purpose: "Recite Tasbeeh for blessings",
+            
             schedule: "Daily",
             leaverId: nil
         )
