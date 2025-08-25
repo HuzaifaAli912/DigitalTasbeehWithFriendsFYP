@@ -386,7 +386,8 @@ struct CreateFromExistingTasbeehView: View {
                 }
                 // post Wazifa items (if any)
                 if hasW {
-                    let entries = selectedWazifaItemIds.map { CompoundWazifaEntry(Wazifa_id: newTasbeehId, wazifa_text_id: $0) }
+                    let entries = selectedWazifaItemIds.map { CompoundWazifaEntry(Tasbeeh_id: newTasbeehId, wazifa_text_id: $0) }
+
                     postCompoundList(url: "\(base)/api/Wazifa/Createcompundwazifa", body: entries) {
                         // after post success
                     }

@@ -1,12 +1,20 @@
 import SwiftUI
+import Combine
 
-// MARK: - Group Tasbeeh Item Model
+// MARK: - Alert
+
+// MARK: - Push updates from Counter
+extension Notification.Name {
+    static let tasbeehProgressDidChange = Notification.Name("tasbeehProgressDidChange")
+}
+
+// MARK: - Model
 struct GroupTasbeehItem: Identifiable, Codable {
     let id: Int
     let title: String
     let goal: Int
-    let achieved: Int
-    let remaining: Int?
+    var achieved: Int          // var so we can live-update
+    var remaining: Int?        // may be nil from API; we recompute
     let deadline: String?
     let schedule: String?
 
@@ -21,106 +29,89 @@ struct GroupTasbeehItem: Identifiable, Codable {
     }
 }
 
-// MARK: - Main View
 struct AllGroupTasbeehView: View {
     let groupId: Int
     let userId: Int
     let groupName: String
-    let adminId: Int = 100 // ← Replace with dynamic value if needed
+    let adminId: Int = 100 // adjust if you have a real admin id
 
     @State private var tasbeehs: [GroupTasbeehItem] = []
     @State private var isLoading = false
     @State private var alertError: AlertError?
 
-    // Navigation
     @State private var goAddMembers = false
+
+    private let baseURL = "http://192.168.137.1/DigitalTasbeehWithFriendsApi"
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Top Header
+                // Header
                 HStack {
                     Spacer()
                     Text(groupName)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.black)
+                        .font(.title2).bold()
                     Spacer()
-
-                    // Menu with only Add Members
                     Menu {
-                        Button("Add Members") {
-                            goAddMembers = true   // navigate
-                        }
+                        Button("Add Members") { goAddMembers = true }
                     } label: {
                         Image(systemName: "ellipsis")
                             .rotationEffect(.degrees(90))
                             .font(.title2)
-                            .foregroundColor(.black)
                     }
                 }
                 .padding()
 
-                // Hidden NavigationLink (programmatic)
+                // Hidden nav to add members
                 NavigationLink(
-                    destination: AddingMemberView(
-                        groupId: groupId,   // 👈 order: groupId first
-                        userId: userId
-                    ),
+                    destination: AddingMemberView(groupId: groupId, userId: userId),
                     isActive: $goAddMembers
                 ) { EmptyView() }
                 .hidden()
 
-                // Loader
-                if isLoading {
-                    ProgressView("Loading Tasbeehs...").padding()
-                }
+                if isLoading { ProgressView("Loading Tasbeehs...").padding() }
 
-                // Tasbeeh List
                 ScrollView {
                     VStack(spacing: 16) {
-                        ForEach(tasbeehs) { tasbeeh in
+                        ForEach(tasbeehs) { t in
                             NavigationLink(
                                 destination: TasbeehCounterView(
                                     tasbeeh: TasbeehCounterModel(
-                                        title: tasbeeh.title,
-                                        arabicText: "سُبْحَانَ ٱللَّٰهِ", // Placeholder
-                                        currentCount: tasbeeh.achieved,
-                                        totalCount: tasbeeh.goal,
-                                        // 👇 yeh 4 values MODEL me pass hongi (view par nahi)
-                                        tasbeehId: tasbeeh.id,
+                                        title: t.title,
+                                        arabicText: "سُبْحَانَ ٱللَّٰهِ", // placeholder
+                                        currentCount: t.achieved,
+                                        totalCount: t.goal,
+                                        tasbeehId: t.id,
                                         groupId: groupId,
                                         userId: userId,
                                         adminId: adminId
                                     )
                                 )
                             ) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(tasbeeh.title)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(t.title)
                                         .font(.headline)
+                                        .foregroundColor(.white)
                                         .padding(.vertical, 6)
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        .foregroundColor(.white)
                                         .background(Color.blue)
                                         .cornerRadius(6)
 
                                     HStack {
-                                        Text("Goal: \(tasbeeh.goal)")
+                                        Text("Goal: \(t.goal)")
                                         Spacer()
-                                        Text("Achieved: \(tasbeeh.achieved)")
+                                        Text("Achieved: \(t.achieved)")
                                         Spacer()
-                                        Text("Remaining: \(tasbeeh.remaining ?? 0)")
+                                        Text("Remaining: \(t.remaining ?? max(0, t.goal - t.achieved))")
                                     }
                                     .font(.subheadline)
-                                    .foregroundColor(.black)
 
                                     HStack {
-                                        Label("Deadline: \(tasbeeh.deadline ?? "N/A")", systemImage: "calendar")
+                                        Label("Deadline: \(t.deadline ?? "N/A")", systemImage: "calendar")
                                             .font(.caption)
                                             .foregroundColor(.gray)
                                         Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .foregroundColor(.gray)
+                                        Image(systemName: "chevron.right").foregroundColor(.gray)
                                     }
                                 }
                                 .padding()
@@ -132,56 +123,64 @@ struct AllGroupTasbeehView: View {
                         }
                     }
                 }
-
-                Spacer()
+                .refreshable { fetchGroupTasbeehs(force: true) } // pull-to-refresh
             }
-            .onAppear { fetchGroupTasbeehs() }
-            .alert(item: $alertError) { error in
-                Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
+            .background(Color(.systemGray6))
+            .onAppear { fetchGroupTasbeehs() } // refetch on return
+            .onReceive(NotificationCenter.default.publisher(for: .tasbeehProgressDidChange)) { note in
+                guard
+                    let info = note.userInfo,
+                    let changedId = info["tasbeehId"] as? Int,
+                    let newAchieved = info["achieved"] as? Int
+                else { return }
+
+                if let idx = tasbeehs.firstIndex(where: { $0.id == changedId }) {
+                    tasbeehs[idx].achieved = newAchieved
+                    tasbeehs[idx].remaining = max(0, tasbeehs[idx].goal - newAchieved)
+                }
+            }
+            .alert(item: $alertError) { e in
+                Alert(title: Text("Message"), message: Text(e.message), dismissButton: .default(Text("OK")))
             }
         }
     }
 
-    // MARK: - API Fetch
-    func fetchGroupTasbeehs() {
-        guard groupId > 0 else {
-            self.alertError = AlertError(message: "Invalid Group ID.")
-            return
-        }
-
+    // MARK: - API
+    private func fetchGroupTasbeehs(force: Bool = false) {
+        if isLoading && !force { return }
         isLoading = true
         alertError = nil
 
-        let urlString = "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/Group/Tasbeehlogs?groupid=\(groupId)&userid=\(userId)"
-
-        guard let url = URL(string: urlString) else {
-            self.alertError = AlertError(message: "Invalid URL.")
+        // GET /api/Group/Tasbeehlogs?groupid=&userid=
+        let urlStr = "\(baseURL)/api/Group/Tasbeehlogs?groupid=\(groupId)&userid=\(userId)"
+        guard let url = URL(string: urlStr) else {
+            isLoading = false
+            alertError = AlertError(message: "Invalid URL")
             return
         }
 
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.shared.dataTask(with: url) { data, _, err in
             DispatchQueue.main.async {
                 isLoading = false
-
-                if let error = error {
-                    self.alertError = AlertError(message: "Network error: \(error.localizedDescription)")
+                if let err = err {
+                    alertError = AlertError(message: "Network error: \(err.localizedDescription)")
                     return
                 }
-
                 guard let data = data else {
-                    self.alertError = AlertError(message: "No data received from server.")
+                    alertError = AlertError(message: "No data from server")
                     return
-                }
-
-                if let jsonStr = String(data: data, encoding: .utf8) {
-                    print("📦 Raw Response: \(jsonStr)")
                 }
 
                 do {
-                    let decoded = try JSONDecoder().decode([GroupTasbeehItem].self, from: data)
-                    self.tasbeehs = decoded
+                    var list = try JSONDecoder().decode([GroupTasbeehItem].self, from: data)
+                    for i in list.indices {
+                        if list[i].remaining == nil {
+                            list[i].remaining = max(0, list[i].goal - list[i].achieved)
+                        }
+                    }
+                    tasbeehs = list
                 } catch {
-                    self.alertError = AlertError(message: "JSON decode error: \(error.localizedDescription)")
+                    alertError = AlertError(message: "Decode error: \(error.localizedDescription)")
                 }
             }
         }.resume()

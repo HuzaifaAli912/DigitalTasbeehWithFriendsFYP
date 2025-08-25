@@ -21,27 +21,35 @@ struct QuranTasbeehItem: Identifiable, Codable {
     var Ayah_text: String
 
     enum CodingKeys: String, CodingKey {
-        case id = "ID"                   // 👈 backend se "ID" aata hai
-        case Sura_name                   // matches exact JSON
+        case id = "ID"                   // backend: "ID"
+        case Sura_name                   // exact casing from API
         case Ayah_number_from
         case Ayah_number_to
         case Ayah_text
     }
 }
 
-
 struct WazifaTextItem: Identifiable, Codable {
     var id: Int
     var text: String
 }
 
+// 👇 EXACT linking payload for Tasbeeh_Detailes (Quran + Wazifa, unified endpoint)
+struct LinkPayload: Codable {
+    let Tasbeeh_id: Int
+    let Quran_Tasbeeh_id: Int?
+    let Wazifa_id: Int?       // <-- UPDATED: use new DB column name
+    let Source: String        // "Quran" | "Wazifa"
+}
+
+// (Optional) Local compound mirrors (UI purpose only)
 struct CompoundQuranEntry: Codable {
     var Tasbeeh_id: Int
     var Quran_Tasbeeh_id: Int
 }
 
 struct CompoundWazifaEntry: Codable {
-    var Wazifa_id: Int
+    var Tasbeeh_id: Int
     var wazifa_text_id: Int
 }
 
@@ -68,6 +76,9 @@ struct CreateTasbeehView: View {
 
     // Navigation to "Create from Existing Tasbeehs"
     @State private var navigateToCreateFromExisting = false
+
+    // Base URL (change IP if needed)
+    private let baseURL = "http://192.168.137.1/DigitalTasbeehWithFriendsApi"
 
     let surahData: [Surah] = [
         Surah(id: "1", title: "Al-Fatiha", ayahs: Array(1...7)),
@@ -196,8 +207,40 @@ struct CreateTasbeehView: View {
         }.joined(separator: "&")
     }
 
+    // MARK: - LINK details to Tasbeeh_Detailes (Quran + Wazifa use unified endpoint)
+    private func linkDetails(rows: [LinkPayload], successMsg: String = "✅ Linked with Tasbeeh") {
+        guard let url = URL(string: "\(baseURL)/api/CreateTasbeeh/CreateCoumpoundTasbeeh") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+        req.httpBody = try? enc.encode(rows)
+
+        #if DEBUG
+        if let body = req.httpBody { print("LINK POST:\n", String(data: body, encoding: .utf8) ?? "-") }
+        #endif
+
+        URLSession.shared.dataTask(with: req) { data, resp, _ in
+            DispatchQueue.main.async {
+                guard let http = resp as? HTTPURLResponse else {
+                    self.alertMessage = "Link: No server response"
+                    self.showAlert = true
+                    return
+                }
+                guard (200...299).contains(http.statusCode) else {
+                    let text = String(data: data ?? Data(), encoding: .utf8) ?? "-"
+                    self.alertMessage = "Link HTTP \(http.statusCode): \(text)"
+                    self.showAlert = true
+                    return
+                }
+                self.alertMessage = successMsg
+                self.showAlert = true
+            }
+        }.resume()
+    }
+
     // MARK: - API Methods
-    // FIXED: addQuranItem now sends all required params and uses encoded query
+    // Add Quran Item then LINK it to parent Tasbeeh (unified endpoint)
     func addQuranItem(tasbeehId: Int) {
         guard let surah = selectedSurah,
               let from = Int(selectedAyahFrom),
@@ -213,18 +256,19 @@ struct CreateTasbeehView: View {
             "surahName": surah.title,
             "ayahNumberFrom": String(from),
             "ayahNumberTo": String(to),
-            "count": "1",                    // REQUIRED by API
-            "tasbeehId": String(tasbeehId)   // REQUIRED
+            "count": "1",
+            "tasbeehId": String(tasbeehId)
         ]
         let query = makeQuery(params)
 
-        let urlString = "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/addqurantasbeeh?\(query)"
+        let urlString = "\(baseURL)/api/CreateTasbeeh/addqurantasbeeh?\(query)"
         guard let url = URL(string: urlString) else { return }
-
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
 
+        #if DEBUG
         print("🔎 AddQuranTasbeeh URL => \(urlString)")
+        #endif
 
         URLSession.shared.dataTask(with: request) { data, resp, _ in
             DispatchQueue.main.async {
@@ -240,14 +284,21 @@ struct CreateTasbeehView: View {
                     return
                 }
 
-                // Backend returns a LIST of Quran_Tasbeeh
+                // Backend returns a LIST of Quran_Tasbeeh rows
                 if let items = try? JSONDecoder().decode([QuranTasbeehItem].self, from: data) {
                     self.quranItems.append(contentsOf: items)
+
+                    // Build link payloads and POST to CreateCoumpoundTasbeeh
+                    let links: [LinkPayload] = items.map {
+                        LinkPayload(Tasbeeh_id: tasbeehId,
+                                    Quran_Tasbeeh_id: $0.id,
+                                    Wazifa_id: nil,     // <-- UPDATED param name
+                                    Source: "Quran")
+                    }
                     self.compoundQuran.append(contentsOf: items.map {
                         CompoundQuranEntry(Tasbeeh_id: tasbeehId, Quran_Tasbeeh_id: $0.id)
                     })
-                    self.alertMessage = "✅ Quran item added & linked"
-                    self.showAlert = true
+                    self.linkDetails(rows: links, successMsg: "✅ Quran item added & linked")
                 } else {
                     self.alertMessage = "Decode error (Quran response)"
                     self.showAlert = true
@@ -256,6 +307,7 @@ struct CreateTasbeehView: View {
         }.resume()
     }
 
+    // Add Wazifa Item then LINK it to parent Tasbeeh (unified endpoint)
     func addWazifaItem(tasbeehId: Int) {
         guard !wazifaText.isEmpty else {
             alertMessage = "Please fill Wazifa text"
@@ -268,7 +320,7 @@ struct CreateTasbeehView: View {
             "tasbeehId": tasbeehId
         ]
 
-        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/Wazifa/Addwazifatext"),
+        guard let url = URL(string: "\(baseURL)/api/Wazifa/Addwazifatext"),
               let data = try? JSONSerialization.data(withJSONObject: body)
         else { return }
 
@@ -293,13 +345,26 @@ struct CreateTasbeehView: View {
                 }
 
                 self.wazifaItems.append(item)
-                self.compoundWazifa.append(CompoundWazifaEntry(Wazifa_id: tasbeehId, wazifa_text_id: item.id))
-                self.alertMessage = "✅ Wazifa item added & linked"
-                self.showAlert = true
+
+                // Build link payload and POST to unified endpoint
+                let link = LinkPayload(
+                    Tasbeeh_id: tasbeehId,
+                    Quran_Tasbeeh_id: nil,
+                    Wazifa_id: item.id,   // <-- UPDATED param name
+                    Source: "Wazifa"
+                )
+
+                // (optional local mirror)
+                self.compoundWazifa.append(
+                    CompoundWazifaEntry(Tasbeeh_id: tasbeehId, wazifa_text_id: item.id)
+                )
+
+                self.linkDetails(rows: [link], successMsg: "✅ Wazifa item added & linked")
             }
         }.resume()
     }
 
+    // Create Parent Tasbeeh, then add first item based on selectedType
     func submitCompound() {
         // Validate title first
         guard !tasbeehTitle.isEmpty else {
@@ -325,7 +390,7 @@ struct CreateTasbeehView: View {
             }
         }
 
-        // Proceed to create the Tasbeeh
+        // Create the Tasbeeh (parent)
         let titleObj: [String: Any] = [
             "Tasbeeh_Title": tasbeehTitle,
             "User_id": userId,
@@ -333,7 +398,7 @@ struct CreateTasbeehView: View {
             "Purpose": purpose
         ]
 
-        guard let titleURL = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/CreateTasbeeh/createtasbeehtitle"),
+        guard let titleURL = URL(string: "\(baseURL)/api/CreateTasbeeh/createtasbeehtitle"),
               let titleData = try? JSONSerialization.data(withJSONObject: titleObj)
         else { return }
 
@@ -363,24 +428,6 @@ struct CreateTasbeehView: View {
                 } else {
                     self.addWazifaItem(tasbeehId: id)
                 }
-            }
-        }.resume()
-    }
-
-    func postCompoundList<T: Codable>(urlPath: String, list: [T]) {
-        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/Wazifa/\(urlPath)"),
-              let data = try? JSONEncoder().encode(list)
-        else { return }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = data
-
-        URLSession.shared.dataTask(with: request) { _, _, _ in
-            DispatchQueue.main.async {
-                alertMessage = "✅ Compound Tasbeeh Created!"
-                showAlert = true
             }
         }.resume()
     }
