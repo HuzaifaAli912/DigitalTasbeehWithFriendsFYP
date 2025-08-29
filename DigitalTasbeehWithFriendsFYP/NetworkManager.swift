@@ -4,7 +4,7 @@ class NetworkManager {
     
     // Login API Call
     func login(email: String, password: String, completion: @escaping (Bool, String) -> ()) {
-        guard let url = URL(string: "http://192.168.0.130/DigitalTasbeehWithFriendsApi/api/user/login?email=abdullahayaz131@email.com&password=4446") else {
+        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/user/login?email=abdullahayaz131@email.com&password=4446") else {
             completion(false, "Invalid URL")
             return
         }

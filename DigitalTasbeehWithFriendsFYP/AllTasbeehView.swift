@@ -9,17 +9,23 @@ struct TasbeehItem: Identifiable, Codable, Equatable {
     let id: Int
     let title: String
     let type: String
-    var isFavorite: Bool   // ✅ added
-    var purpose: String?   // NEW: Add Purpose field
+    var isFavorite: Bool
+    var purpose: String?
+    var surahName: String?      // ✅ NEW: Surah support
 
     enum CodingKeys: String, CodingKey {
         case id = "ID"
         case title = "Tasbeeh_Title"
         case type = "Type"
-        case isFavorite = "IsFavorite"      // primary backend key
-        case isFavoriteLower = "isFavorite" // decode-only fallback
-        case isFavouriteUK   = "IsFavourite" // decode-only fallback
-        case purpose = "purpose" // NEW: Ensure "purpose" key matches API response (lowercase)
+        case isFavorite = "IsFavorite"        // primary backend key
+        case isFavoriteLower = "isFavorite"   // decode-only fallback
+        case isFavouriteUK   = "IsFavourite"  // decode-only fallback
+        case purpose = "purpose"
+
+        // ✅ Surah name keys (any of these will work)
+        case surahName = "surahName"
+        case suraNameLegacy = "Sura_name"
+        case surahLegacy = "Surah"
     }
 
     // Robust Decodable
@@ -28,7 +34,7 @@ struct TasbeehItem: Identifiable, Codable, Equatable {
         id    = try c.decode(Int.self, forKey: .id)
         title = try c.decode(String.self, forKey: .title)
         type  = (try? c.decode(String.self, forKey: .type)) ?? ""
-        purpose = try? c.decode(String.self, forKey: .purpose)  // NEW: Decode Purpose
+        purpose = try? c.decode(String.self, forKey: .purpose)
 
         func decodeBool(for key: CodingKeys) -> Bool? {
             if let b = try? c.decode(Bool.self, forKey: key) { return b }
@@ -43,6 +49,12 @@ struct TasbeehItem: Identifiable, Codable, Equatable {
                   ?? decodeBool(for: .isFavoriteLower)
                   ?? decodeBool(for: .isFavouriteUK)
                   ?? false
+
+        // ✅ Surah name decode (supports multiple possible keys)
+        surahName =
+            (try? c.decode(String.self, forKey: .surahName)) ??
+            (try? c.decode(String.self, forKey: .suraNameLegacy)) ??
+            (try? c.decode(String.self, forKey: .surahLegacy))
     }
 
     // Custom Encodable (so extra decode-only keys don't break Encodable)
@@ -52,10 +64,10 @@ struct TasbeehItem: Identifiable, Codable, Equatable {
         try c.encode(title, forKey: .title)
         try c.encode(type, forKey: .type)
         try c.encode(isFavorite, forKey: .isFavorite)
-        try c.encode(purpose, forKey: .purpose)  // NEW: Encode Purpose
+        try c.encode(purpose, forKey: .purpose)
+        try c.encodeIfPresent(surahName, forKey: .surahName) // ✅ safe
     }
 
-    // Keep Equatable stable by id (so selection isn't affected by isFavorite changes)
     static func == (lhs: TasbeehItem, rhs: TasbeehItem) -> Bool { lhs.id == rhs.id }
 }
 
@@ -168,7 +180,7 @@ struct AllTasbeehView: View {
                                             .font(.caption)
                                             .foregroundColor(.gray)
 
-                                        // Displaying Purpose (New)
+                                        // Displaying Purpose (unchanged)
                                         if let purpose = tasbeeh.purpose, !purpose.isEmpty {
                                             Text(purpose)
                                                 .font(.subheadline)
@@ -189,29 +201,27 @@ struct AllTasbeehView: View {
                                         Image(systemName: "trash")
                                             .foregroundColor(.red)
                                     }
-                                    .buttonStyle(.plain) // ✅ ensure NavigationLink doesn't steal tap
+                                    .buttonStyle(.plain)
 
-                                    // Favorite (fixed)
+                                    // Favorite (unchanged)
                                     Button(action: {
                                         toggleFavorite(tasbeeh)   // optimistic UI inside
                                     }) {
-                                        // read live state by id so it reflects immediately
                                         let isFav = tasbeehs.first(where: { $0.id == tasbeeh.id })?.isFavorite ?? false
                                         Image(systemName: isFav ? "heart.fill" : "heart")
                                             .foregroundColor(isFav ? .red : .white)
                                     }
-                                    .buttonStyle(.plain)   // ✅ critical on iOS
+                                    .buttonStyle(.plain)
                                     .disabled(favBusyId == tasbeeh.id)
                                 }
                                 .padding()
                                 .background(
-                                    // ⬅️ FIXED: single-expression ternary (no multi-statement closure)
                                     (selectedTasbeehs.contains(tasbeeh) && isCompoundMode)
                                     ? Color.green.opacity(0.3)
                                     : Color.blue.opacity(0.3)
                                 )
                                 .cornerRadius(12)
-                                .contentShape(Rectangle()) // ✅ clean hit-testing; no behavior change
+                                .contentShape(Rectangle())
                                 .onTapGesture {
                                     if isCompoundMode {
                                         if selectedTasbeehs.contains(tasbeeh) {
@@ -302,7 +312,7 @@ struct AllTasbeehView: View {
         }
     }
 
-    // ✅ Apply Favourite filter + search
+    // ✅ Apply Favourite filter + search (now includes surahName)
     var filteredTasbeehs: [TasbeehItem] {
         var list = tasbeehs
         if filterTab == .favourite {
@@ -310,7 +320,11 @@ struct AllTasbeehView: View {
         }
         if !searchText.isEmpty {
             let q = searchText.lowercased()
-            list = list.filter { $0.title.lowercased().contains(q) || ($0.purpose?.lowercased().contains(q) ?? false) }  // Filter by Purpose
+            list = list.filter {
+                $0.title.lowercased().contains(q)
+                || ($0.purpose?.lowercased().contains(q) ?? false)
+                || ($0.surahName?.lowercased().contains(q) ?? false) // ✅ NEW
+            }
         }
         return list
     }
@@ -459,9 +473,9 @@ struct AllTasbeehView: View {
     func toggleFavorite(_ tasbeeh: TasbeehItem) {
         guard let idx = tasbeehs.firstIndex(where: { $0.id == tasbeeh.id }) else { return }
         let newValue = !tasbeehs[idx].isFavorite
-        let tasbeehId = tasbeeh.id   // ✅ capture only the id
+        let tasbeehId = tasbeeh.id
 
-        // ✅ optimistic UI — update immediately (with a tiny animation)
+        // ✅ optimistic UI
         withAnimation(.easeInOut(duration: 0.12)) {
             tasbeehs[idx].isFavorite = newValue
         }

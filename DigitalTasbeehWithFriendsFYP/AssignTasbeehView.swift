@@ -195,7 +195,7 @@ struct AssignTasbeehView: View {
                     let groupId = Int(selectedGroupOrSingle) ?? 0
                     let query = "groupid=\(groupId)&tasbeehid=\(id)"
                     postRequest(
-                        urlString: "http://192.168.0.130/DigitalTasbeehWithFriendsApi/api/Request/DistributeTasbeehEqually?\(query)",
+                        urlString: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/Request/DistributeTasbeehEqually?\(query)",
                         payload: [:]
                     )
                 }

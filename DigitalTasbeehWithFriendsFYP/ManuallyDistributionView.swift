@@ -17,14 +17,26 @@ struct ManuallyContributionView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
 
+    // NEW: backend se per-member workload metrics
+    struct MemberLoad: Identifiable, Decodable {
+        let userId: Int
+        let groupUserId: Int
+        let username: String
+        let alreadyIn: Int
+        let groupsCount: Int
+        var id: Int { groupUserId }
+    }
+    // NEW: Do maps rakho — kyunki Memberid kabhi Users.ID hota hai, kabhi GroupUsers.ID
+    @State private var loadsByGroupUserId: [Int: (tasbeehs: Int, groups: Int)] = [:]
+    @State private var loadsByUserId: [Int: (tasbeehs: Int, groups: Int)] = [:]   // NEW
+
     struct GroupMember: Identifiable, Decodable {
-        let id: Int
+        let id: Int                     // "Memberid" (could be Users.ID or GroupUsers.ID depending on API)
         let memberName: String
-        let adminUserId: Int         // <- decode Admin as Int
+        let adminUserId: Int
         let groupId: Int
         let groupTitle: String
 
-        // derive a Bool for convenience
         var isAdmin: Bool { id == adminUserId }
 
         enum CodingKeys: String, CodingKey {
@@ -49,12 +61,26 @@ struct ManuallyContributionView: View {
                     .padding(.bottom)
 
                 List(groupMembers) { member in
-                    HStack {
-                        Text(member.memberName)
-                            .font(.body)
-                        if member.isAdmin {
-                            Text("Admin")
-                                .foregroundColor(.green)
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 6) {
+                                Text(member.memberName)
+                                    .font(.body)
+                                if member.isAdmin {
+                                    Text("Admin")
+                                        .foregroundColor(.green)
+                                }
+                            }
+
+                            // CHANGED: try by GroupUserId first, else by Users.Id map
+                            let m =
+                                loadsByGroupUserId[member.id] ??
+                                loadsByUserId[member.id] ??
+                                (tasbeehs: 0, groups: 0)
+
+                            Text("Already in \(m.tasbeehs) tasbeehs and \(m.groups) groups")
+                                .font(.caption)
+                                .foregroundColor(.gray)
                         }
 
                         Spacer()
@@ -88,7 +114,10 @@ struct ManuallyContributionView: View {
 
                 Spacer()
             }
-            .onAppear { getGroupMembers() }
+            .onAppear {
+                getGroupMembers()
+                fetchMemberLoads(groupId: groupId) // NEW
+            }
             .navigationTitle("Manually Contribution")
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
@@ -103,15 +132,13 @@ struct ManuallyContributionView: View {
 
         URLSession.shared.dataTask(with: url) { data, _, _ in
             if let data = data {
-                // For debugging
-                print("Received data: \(String(data: data, encoding: .utf8) ?? "")")
+                print("Members JSON:", String(data: data, encoding: .utf8) ?? "")
                 do {
                     let decoded = try JSONDecoder().decode([GroupMember].self, from: data)
                     DispatchQueue.main.async {
                         self.groupMembers = decoded
                         self.groupTitle = decoded.first?.groupTitle ?? "Group"
                         self.counts = Array(repeating: "", count: decoded.count)
-                        // Optional: init selectedCount to "0"
                         for m in decoded { self.selectedCount["\(m.id)"] = self.selectedCount["\(m.id)"] ?? "" }
                     }
                 } catch {
@@ -129,9 +156,32 @@ struct ManuallyContributionView: View {
         }.resume()
     }
 
+    // MARK: - NEW API: fetch per-member workload (fills BOTH maps)
+    func fetchMemberLoads(groupId: Int) {
+        guard let url = URL(string: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/Group/MemberTasbeehLoad?groupid=\(groupId)") else { return }
+        URLSession.shared.dataTask(with: url) { data, _, err in
+            guard let data = data, err == nil else { return }
+            do {
+                let arr = try JSONDecoder().decode([MemberLoad].self, from: data)
+                print("Loads JSON:", String(data: data, encoding: .utf8) ?? "")
+                DispatchQueue.main.async {
+                    var mapGU: [Int:(Int,Int)] = [:]
+                    var mapU:  [Int:(Int,Int)] = [:]
+                    for x in arr {
+                        mapGU[x.groupUserId] = (x.alreadyIn, x.groupsCount)
+                        mapU[x.userId]       = (x.alreadyIn, x.groupsCount)
+                    }
+                    self.loadsByGroupUserId = mapGU
+                    self.loadsByUserId = mapU
+                }
+            } catch {
+                print("Member load decode error:", error.localizedDescription)
+            }
+        }.resume()
+    }
+
     // MARK: - API: Assign Tasbeeh header record
     func assignTasbeeh() {
-        // Validate total (your current logic checks sum vs goal)
         let numericCounts = selectedCount.values.compactMap { Int($0) }
         let total = numericCounts.reduce(0, +)
         if total > goal {
@@ -146,7 +196,6 @@ struct ManuallyContributionView: View {
             "Goal": goal,
             "End_date": endDate ?? "",
             "schedule": schedule,
-            
         ]
 
         postRequest(urlString: "http://192.168.137.1/DigitalTasbeehWithFriendsApi/api/AssignTasbeeh/AssignTasbeeh",
@@ -163,7 +212,6 @@ struct ManuallyContributionView: View {
     // MARK: - API: Distribute with aligned arrays
     func distributeTasbeehManually() {
         let memberIds = groupMembers.map { $0.id }
-        // build counts array aligned with the same order as memberIds
         let countsArray = groupMembers.map { Int(selectedCount["\($0.id)"] ?? "0") ?? 0 }
 
         let formData: [String: Any] = [
@@ -177,7 +225,6 @@ struct ManuallyContributionView: View {
                     payload: formData) { result in
             if result {
                 print("Tasbeeh assigned and distributed successfully")
-                // You can navigate back or show success if you want
             } else {
                 self.alertMessage = "Failed to distribute tasbeeh."
                 self.showAlert = true
@@ -220,7 +267,6 @@ struct ManuallyContributionView_Previews: PreviewProvider {
             tasbeehId: 1,
             goal: 90,
             endDate: "2025/12/31",
-            
             schedule: "Daily",
             leaverId: nil
         )
